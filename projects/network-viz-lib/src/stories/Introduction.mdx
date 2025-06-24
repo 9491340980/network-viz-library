@@ -1,0 +1,86 @@
+import { Meta } from '@storybook/blocks';
+
+<Meta title="Introduction" />
+
+# 🌐 Network Visualization Component Library
+
+Welcome to the **Network Visualization Component Library** - a comprehensive set of Angular components for creating beautiful, interactive network graphs and visualizations.
+
+## 🌟 Features
+
+- **High Performance** - Optimized for large datasets (1000+ nodes)
+- **Fully Customizable** - Every aspect can be configured
+- **Mobile Ready** - Touch gestures and responsive design
+- **Accessibility First** - WCAG 2.1 AA compliant
+- **Plugin System** - Extensible architecture
+- **TypeScript** - Full type safety
+
+## 🚀 Quick Start
+
+```typescript
+import { NetworkVisualizationV2Component } from '@your-org/network-viz-lib';
+
+@Component({
+  template: `
+    <nvl-network-visualization-v2
+      [data]="networkData"
+      [config]="config"
+      [width]="800"
+      [height]="600">
+    </nvl-network-visualization-v2>
+  `
+})
+export class MyComponent {
+  networkData = {
+    nodes: [
+      { id: 1, label: 'Node 1', group: 'A' },
+      { id: 2, label: 'Node 2', group: 'B' }
+    ],
+    links: [
+      { source: 1, target: 2 }
+    ]
+  };
+
+  config = {
+    nodeStyles: {
+      defaultSize: 15,
+      groupColors: {
+        'A': '#ff6b6b',
+        'B': '#4ecdc4'
+      }
+    }
+  };
+}
+```
+
+## 📚 Documentation
+
+Explore the components in the sidebar to see all available features and configurations.
+
+## 🎨 Themes
+
+The library comes with several built-in themes:
+- **Light** - Clean, professional appearance
+- **Dark** - Modern dark theme
+- **Corporate** - Enterprise-friendly styling
+- **Cyberpunk** - Futuristic neon theme
+
+## ⚡ Performance
+
+Built for performance with:
+- Virtualization for large datasets
+- Optimized rendering pipeline
+- Memory leak prevention
+- Performance monitoring tools
+
+## 🔌 Extensibility
+
+The plugin system allows you to extend functionality:
+- Custom interaction behaviors
+- Additional visualization types
+- Data processing pipelines
+- Export/import formats
+
+---
+
+**Get started by exploring the components in the sidebar!**
