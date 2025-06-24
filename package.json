@@ -1,12 +1,28 @@
 {
   "name": "network-viz-library",
   "version": "0.0.0",
-  "scripts": {
+   "scripts": {
     "ng": "ng",
-    "start": "ng serve",
-    "build": "ng build",
-    "watch": "ng build --watch --configuration development",
-    "test": "ng test"
+    "start": "ng serve demo-app",
+    "build": "ng build network-viz-lib",
+    "build:demo": "ng build demo-app",
+    "build:all": "npm run build && npm run build:demo",
+    "watch": "ng build network-viz-lib --watch --configuration development",
+    "test": "ng test",
+    "test:lib": "ng test network-viz-lib",
+    "test:coverage": "ng test network-viz-lib --code-coverage",
+    "test:watch": "ng test network-viz-lib --watch",
+    "test:headless": "ng test network-viz-lib --watch=false --browsers=ChromeHeadless",
+    "e2e": "cypress open",
+    "e2e:headless": "cypress run",
+    "lint": "ng lint",
+    "storybook": "storybook dev -p 6006",
+    "build-storybook": "storybook build",
+    "deploy-storybook": "storybook build && gh-pages -d storybook-static",
+    "docs:generate": "compodoc -p projects/network-viz-lib/tsconfig.lib.json -d docs/api --theme material",
+    "docs:serve": "compodoc -p projects/network-viz-lib/tsconfig.lib.json -s -d docs/api",
+    "release": "npm run build && npm publish dist/network-viz-lib",
+    "pack": "npm run build && cd dist/network-viz-lib && npm pack"
   },
   "private": true,
   "dependencies": {
