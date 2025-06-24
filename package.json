@@ -1,0 +1,50 @@
+{
+  "name": "network-viz-library",
+  "version": "0.0.0",
+  "scripts": {
+    "ng": "ng",
+    "start": "ng serve",
+    "build": "ng build",
+    "watch": "ng build --watch --configuration development",
+    "test": "ng test"
+  },
+  "private": true,
+  "dependencies": {
+    "@angular/common": "^19.2.0",
+    "@angular/compiler": "^19.2.0",
+    "@angular/core": "^19.2.0",
+    "@angular/forms": "^19.2.0",
+    "@angular/platform-browser": "^19.2.0",
+    "@angular/platform-browser-dynamic": "^19.2.0",
+    "@angular/router": "^19.2.0",
+    "d3": "^7.8.5",
+    "rxjs": "~7.8.0",
+    "tslib": "^2.3.0",
+    "zone.js": "~0.15.0"
+  },
+  "devDependencies": {
+    "@angular-devkit/build-angular": "^19.2.15",
+    "@angular/cli": "^19.2.15",
+    "@angular/compiler-cli": "^19.2.0",
+    "@compodoc/compodoc": "^1.1.26",
+    "@storybook/addon-a11y": "^8.0.0",
+    "@storybook/addon-controls": "^8.0.0",
+    "@storybook/addon-docs": "^8.0.0",
+    "@storybook/addon-essentials": "^8.0.0",
+    "@storybook/addon-storysource": "^8.0.0",
+    "@storybook/addon-viewport": "^8.0.0",
+    "@storybook/angular": "^8.0.0",
+    "@types/d3": "^7.4.0",
+    "@types/jasmine": "~5.1.0",
+    "cypress": "^13.0.0",
+    "jasmine": "^5.0.0",
+    "jasmine-core": "~5.6.0",
+    "karma": "^6.4.0",
+    "karma-chrome-launcher": "~3.2.0",
+    "karma-coverage": "~2.2.0",
+    "karma-jasmine": "~5.1.0",
+    "karma-jasmine-html-reporter": "~2.1.0",
+    "ng-packagr": "^19.0.0",
+    "typescript": "~5.6.0"
+  }
+}
