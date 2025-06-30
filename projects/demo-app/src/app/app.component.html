@@ -1,69 +1,40 @@
-<div class="app-container">
-      <h1>🚀 Network Visualization Demo</h1>
+<!-- Add this to your existing template controls section -->
 
-      <div class="status-banner" [ngClass]="statusClass">
-        <strong>Status:</strong> {{ statusMessage }}
-      </div>
+<div class="controls">
+  <!-- Your existing buttons -->
+  <button (click)="loadSampleData()" [disabled]="isLoading">
+    {{ isLoading ? 'Loading...' : 'Load Sample Data' }}
+  </button>
+  <button (click)="addRandomNode()" [disabled]="isLoading">Add Random Node</button>
+  <button (click)="clearData()" [disabled]="isLoading">Clear Data</button>
+  <button (click)="toggleTheme()">Toggle Theme</button>
 
-      <div class="controls">
-        <button (click)="loadSampleData()" [disabled]="isLoading">
-          {{ isLoading ? 'Loading...' : 'Load Sample Data' }}
-        </button>
-        <button (click)="addRandomNode()" [disabled]="isLoading">Add Random Node</button>
-        <button (click)="clearData()" [disabled]="isLoading">Clear Data</button>
-        <button (click)="toggleTheme()">Toggle Theme</button>
-      </div>
-<button (click)="debugNetworkData()" class="debug-button">
-  🐛 Debug Data
-</button>
-      <div class="visualization-wrapper">
-        <app-network-visualization-v2
-          [data]="networkData"
-          [config]="networkConfig"
-          [width]="800"
-          [height]="600"
-          [showTooltip]="true"
-          [showLegend]="true"
-          [showControls]="true"
-          (nodeClick)="onNodeClick($event)"
-          (nodeHover)="onNodeHover($event)"
-          (linkClick)="onLinkClick($event)"
-          (backgroundClick)="onBackgroundClick($event)">
-        </app-network-visualization-v2>
-      </div>
+  <!-- ADD THESE DEBUG BUTTONS -->
+  <div class="debug-controls" style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #ccc;">
+    <h4 style="margin: 0 0 5px 0; font-size: 14px;">🔧 Debug Tools</h4>
+    <button (click)="debugNetworkData()" style="margin-right: 5px;">🔍 Debug Data</button>
+    <button (click)="debugVisualization()" style="margin-right: 5px;">🔍 Debug Viz</button>
+    <button (click)="forceRepositionNodes()" style="margin-right: 5px;">🔄 Reposition</button>
+  </div>
+</div>
 
-      <div class="info-panels">
-        <div class="panel">
-          <h3>📊 Network Stats</h3>
-          <ul>
-            <li>Nodes: {{ networkData.nodes.length }}</li>
-            <li>Links: {{ networkData.links.length }}</li>
-            <li>Groups: {{ getUniqueGroups().length }}</li>
-          </ul>
-        </div>
+<!-- Update your visualization component to include ViewChild reference -->
+<div class="visualization-wrapper">
+  <app-network-visualization-v2
+    #networkViz
+    [data]="networkData"
+    [config]="networkConfig"
+    [width]="800"
+    [height]="600"
+    [showTooltip]="true"
+    [showLegend]="true"
+    [showControls]="true"
+    (nodeClick)="onNodeClick($event)"
+    (nodeHover)="onNodeHover($event)"
+    (linkClick)="onLinkClick($event)"
+    (backgroundClick)="onBackgroundClick($event)">
+  </app-network-visualization-v2>
+</div>
 
-        <div class="panel">
-          <h3>🎯 Event Log</h3>
-          <div class="event-log">
-            <div *ngFor="let event of eventLog.slice(-5); let i = index"
-                 [class]="'event-' + event.type">
-              {{ event.timestamp.toLocaleTimeString() }}: {{ event.message }}
-            </div>
-            <div *ngIf="eventLog.length === 0" class="no-events">
-              No events yet - try hovering or clicking nodes
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="instructions">
-        <h3>🎮 How to Use</h3>
-        <ul>
-          <li><strong>Hover</strong> over nodes to see tooltips</li>
-          <li><strong>Click</strong> nodes and links to trigger events</li>
-          <li><strong>Drag</strong> nodes to reposition them</li>
-          <li><strong>Scroll</strong> to zoom in/out</li>
-          <li><strong>Use controls</strong> in top-right for navigation</li>
-        </ul>
-      </div>
-    </div>
+<!-- Also add the ViewChild import to your AppComponent -->
+<!-- import { ViewChild } from '@angular/core'; -->

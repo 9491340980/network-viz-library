@@ -1,178 +1,383 @@
 .app-container {
-      padding: 20px;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      max-width: 1200px;
-      margin: 0 auto;
-      background: #f8f9fa;
-      min-height: 100vh;
-    }
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
 
-    h1 {
-      color: #2c3e50;
-      text-align: center;
-      margin-bottom: 30px;
-      font-size: 2.5em;
-      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
+h1 {
+  text-align: center;
+  color: #333;
+  margin-bottom: 20px;
+  font-size: 2.5rem;
+  background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
 
-    .status-banner {
-      padding: 15px;
-      border-radius: 8px;
-      margin: 20px 0;
-      text-align: center;
-      font-weight: bold;
-    }
+.status-banner {
+  padding: 12px 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-weight: 500;
+  text-align: center;
+  border: 2px solid;
 
-    .status-banner.success {
-      background: #d4edda;
-      color: #155724;
-      border: 1px solid #c3e6cb;
-    }
+  &.success {
+    background-color: #d4edda;
+    color: #155724;
+    border-color: #c3e6cb;
+  }
 
-    .status-banner.error {
-      background: #f8d7da;
-      color: #721c24;
-      border: 1px solid #f5c6cb;
-    }
+  &.loading {
+    background-color: #fff3cd;
+    color: #856404;
+    border-color: #ffeaa7;
+  }
 
-    .status-banner.loading {
-      background: #fff3cd;
-      color: #856404;
-      border: 1px solid #ffeaa7;
-    }
+  &.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border-color: #f5c6cb;
+  }
+}
 
-    .controls {
-      display: flex;
-      gap: 15px;
-      margin: 20px 0;
-      flex-wrap: wrap;
-      justify-content: center;
-    }
+.controls {
+  margin-bottom: 30px;
 
-    .controls button {
-      padding: 12px 24px;
-      border: 2px solid #3498db;
-      border-radius: 6px;
-      background: white;
-      color: #3498db;
-      cursor: pointer;
-      font-weight: bold;
-      transition: all 0.3s ease;
-    }
+  .main-controls {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    justify-content: center;
+    margin-bottom: 15px;
+  }
 
-    .controls button:hover:not(:disabled) {
-      background: #3498db;
-      color: white;
+  button {
+    padding: 12px 20px;
+    border: none;
+    border-radius: 6px;
+    background: linear-gradient(45deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 120px;
+
+    &:hover:not(:disabled) {
       transform: translateY(-2px);
-      box-shadow: 0 4px 8px rgba(52, 152, 219, 0.3);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
 
-    .controls button:disabled {
-      opacity: 0.5;
+    &:disabled {
+      opacity: 0.6;
       cursor: not-allowed;
       transform: none;
     }
 
-    .visualization-wrapper {
-      margin: 30px 0;
-      border: 3px solid #e0e0e0;
-      border-radius: 12px;
-      padding: 15px;
-      background: white;
-      box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    &:active {
+      transform: translateY(0);
     }
+  }
+}
 
-    .info-panels {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 20px;
-      margin: 30px 0;
+.debug-controls {
+  border: 2px solid #ff6b6b !important;
+  border-radius: 8px !important;
+  background-color: #fff5f5 !important;
+  padding: 15px !important;
+  margin-top: 15px !important;
+
+  h4 {
+    margin: 0 0 10px 0 !important;
+    color: #ff6b6b !important;
+    font-size: 16px !important;
+  }
+
+  div {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  button {
+    padding: 8px 12px !important;
+    border: none !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+    font-weight: 500 !important;
+    font-size: 14px !important;
+    min-width: auto !important;
+    transition: all 0.2s ease !important;
+
+    &:hover {
+      transform: translateY(-1px) !important;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2) !important;
     }
+  }
 
-    .panel {
-      background: white;
-      padding: 20px;
+  p {
+    margin: 10px 0 0 0 !important;
+    color: #666 !important;
+    font-size: 12px !important;
+  }
+}
+
+.visualization-wrapper {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+  margin-bottom: 30px;
+
+  // CRITICAL: Force visibility styles for the network visualization
+  ::ng-deep app-network-visualization-v2 {
+    display: block !important;
+
+    .network-container {
+      border: 2px solid green !important; /* Debug border */
       border-radius: 8px;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-      border-left: 4px solid #3498db;
+      background: #fafafa;
     }
 
-    .panel h3 {
-      margin-top: 0;
-      color: #2c3e50;
-      font-size: 1.2em;
+    svg {
+      border: 2px solid blue !important; /* Debug border */
+      background-color: #f0f0f0 !important; /* Light background */
+      display: block !important;
     }
 
-    .panel ul {
-      list-style: none;
-      padding: 0;
+    // FORCE NODE VISIBILITY
+    .node {
+      pointer-events: all !important;
+      cursor: pointer !important;
+
+      circle {
+        fill: red !important;
+        stroke: blue !important;
+        stroke-width: 3px !important;
+        opacity: 1 !important;
+        display: block !important;
+        visibility: visible !important;
+      }
+
+      rect {
+        fill: red !important;
+        stroke: blue !important;
+        stroke-width: 3px !important;
+        opacity: 1 !important;
+        display: block !important;
+        visibility: visible !important;
+      }
     }
 
-    .panel li {
-      padding: 5px 0;
-      border-bottom: 1px solid #ecf0f1;
+    // FORCE LINK VISIBILITY
+    .link {
+      stroke: green !important;
+      stroke-width: 3px !important;
+      opacity: 1 !important;
+      display: block !important;
+      visibility: visible !important;
     }
 
-    .event-log {
-      font-family: monospace;
-      font-size: 12px;
-      max-height: 150px;
-      overflow-y: auto;
-      background: #f8f9fa;
-      padding: 10px;
-      border-radius: 4px;
+    // FORCE GROUP VISIBILITY
+    .zoom-group,
+    .nodes-group,
+    .links-group {
+      display: block !important;
+      visibility: visible !important;
     }
 
-    .event-log div {
-      padding: 3px 0;
-      border-bottom: 1px solid #dee2e6;
+    // Highlighted states
+    .node.highlighted {
+      circle, rect {
+        stroke: #ff6b35 !important;
+        stroke-width: 5px !important;
+      }
     }
 
-    .event-nodeClick { color: #2196F3; font-weight: bold; }
-    .event-nodeHover { color: #4CAF50; }
-    .event-linkClick { color: #FF9800; font-weight: bold; }
-    .event-backgroundClick { color: #9E9E9E; }
-    .event-system { color: #6c757d; font-style: italic; }
+    .link.highlighted {
+      stroke: #ff6b35 !important;
+      stroke-opacity: 1 !important;
+    }
+  }
+}
 
-    .no-events {
-      color: #6c757d;
-      font-style: italic;
-      text-align: center;
+.info-panels {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-bottom: 30px;
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.panel {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+
+  h3 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 1.2rem;
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+
+    li {
+      padding: 8px 0;
+      border-bottom: 1px solid #eee;
+      color: #666;
+
+      &:last-child {
+        border-bottom: none;
+      }
+    }
+  }
+}
+
+.event-log {
+  max-height: 200px;
+  overflow-y: auto;
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+
+  div {
+    padding: 4px 8px;
+    margin: 2px 0;
+    border-radius: 4px;
+
+    &.event-system {
+      background-color: #e3f2fd;
+      color: #1565c0;
     }
 
-    .instructions {
-      background: #e8f4fd;
-      padding: 20px;
-      border-radius: 8px;
-      border-left: 4px solid #3498db;
-      margin: 30px 0;
+    &.event-nodeClick {
+      background-color: #f3e5f5;
+      color: #7b1fa2;
     }
 
-    .instructions h3 {
-      margin-top: 0;
-      color: #2c3e50;
+    &.event-nodeHover {
+      background-color: #e8f5e8;
+      color: #2e7d32;
     }
 
-    .instructions ul {
-      margin: 15px 0;
+    &.event-linkClick {
+      background-color: #fff3e0;
+      color: #ef6c00;
     }
 
-    .instructions li {
+    &.event-backgroundClick {
+      background-color: #fafafa;
+      color: #616161;
+    }
+  }
+
+  .no-events {
+    color: #999;
+    font-style: italic;
+    text-align: center;
+    padding: 20px;
+  }
+}
+
+.instructions {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+
+  h3 {
+    margin: 0 0 15px 0;
+    color: #333;
+    font-size: 1.2rem;
+  }
+
+  h4 {
+    margin: 0 0 10px 0;
+    color: #555;
+    font-size: 1rem;
+  }
+
+  ul {
+    margin: 0;
+    padding-left: 20px;
+
+    li {
       margin: 8px 0;
-      padding-left: 5px;
+      color: #666;
+      line-height: 1.4;
+
+      strong {
+        color: #333;
+      }
     }
+  }
 
-    @media (max-width: 768px) {
-      .info-panels {
-        grid-template-columns: 1fr;
+  @media (max-width: 768px) {
+    div[style*="grid"] {
+      display: block !important;
+
+      div {
+        margin-bottom: 20px;
       }
+    }
+  }
+}
 
-      .controls {
-        justify-content: center;
-      }
+// Responsive design
+@media (max-width: 768px) {
+  .app-container {
+    padding: 10px;
+  }
 
-      .controls button {
+  h1 {
+    font-size: 2rem;
+  }
+
+  .controls {
+    .main-controls {
+      justify-content: stretch;
+
+      button {
         flex: 1;
-        min-width: 120px;
+        min-width: auto;
       }
     }
+  }
+
+  .visualization-wrapper {
+    padding: 10px;
+
+    ::ng-deep app-network-visualization-v2 {
+      width: 100% !important;
+      height: 400px !important;
+    }
+  }
+}
+
+// Dark theme support
+.dark-theme {
+  background-color: #1a1a1a;
+  color: #fff;
+
+  .panel,
+  .visualization-wrapper,
+  .instructions {
+    background: #2d2d2d;
+    color: #fff;
+  }
+
+  h1,
+  h3,
+  h4 {
+    color: #fff;
+  }
+}

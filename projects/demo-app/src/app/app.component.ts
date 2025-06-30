@@ -1,17 +1,19 @@
 import { CommonModule } from '@angular/common';
-import { Component } from '@angular/core';
+import { Component, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterOutlet } from '@angular/router';
 import { NetworkData, NetworkEvent, NetworkVisualizationConfig, NetworkVisualizationV2Component } from 'dist/network-viz-lib';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, CommonModule, FormsModule, NetworkVisualizationV2Component],
+  imports: [RouterOutlet, CommonModule, FormsModule,NetworkVisualizationV2Component],
   templateUrl: './app.component.html',
   styleUrl: './app.component.scss'
 })
 export class AppComponent {
+  @ViewChild(NetworkVisualizationV2Component) networkViz!: NetworkVisualizationV2Component;
   title = 'Network Visualization Demo';
+  hasDataBeenLoaded = false;
 
   // State
   isLoading = false;
@@ -100,6 +102,32 @@ export class AppComponent {
     this.loadSampleData();
   }
 
+
+    // Debug buttons - add these to your template
+  debugVisualization(): void {
+    console.log('🔍 DEBUG: App Component Data');
+    console.log('Current data:', this.networkData);
+    console.log('Data loaded flag:', this.hasDataBeenLoaded);
+
+    // Call debug method on child component
+    if (this.networkViz) {
+      (this.networkViz as any).debugVisualization();
+    } else {
+      console.log('❌ NetworkViz component not found');
+    }
+  }
+
+   forceRepositionNodes(): void {
+    console.log('🔄 Force repositioning from parent');
+
+    if (this.networkViz) {
+      (this.networkViz as any).forceRepositionNodes();
+    } else {
+      console.log('❌ NetworkViz component not found');
+    }
+  }
+
+
   debugNetworkData(): void {
     console.log('🔍 Debugging Network Data...');
     console.log('Raw data:', this.networkData);
@@ -108,6 +136,19 @@ export class AppComponent {
     console.log('📊 Nodes Analysis:');
     console.log('Node count:', this.networkData.nodes.length);
     console.log('Node IDs:', this.networkData.nodes.map(n => `${n.id} (${typeof n.id})`));
+
+    // Check for positions
+    this.networkData.nodes.forEach(node => {
+      console.log(`Node ${node.id}:`, {
+        label: node.label,
+        group: node.group,
+        size: node.size,
+        x: (node as any).x,
+        y: (node as any).y,
+        fx: (node as any).fx,
+        fy: (node as any).fy
+      });
+    });
 
     // Check for duplicate IDs
     const nodeIds = this.networkData.nodes.map(n => n.id.toString());
@@ -128,7 +169,12 @@ export class AppComponent {
       const sourceExists = this.networkData.nodes.some(n => n.id.toString() === sourceId);
       const targetExists = this.networkData.nodes.some(n => n.id.toString() === targetId);
 
-      console.log(`Link ${index}: ${sourceId} -> ${targetId}`);
+      console.log(`Link ${index}: ${sourceId} -> ${targetId}`, {
+        sourceExists,
+        targetExists,
+        value: (link as any).value,
+        width: (link as any).width
+      });
 
       if (!sourceExists) {
         console.error(`❌ Source node not found: ${sourceId}`);
@@ -152,6 +198,8 @@ export class AppComponent {
       console.log('✅ All links have valid node references');
     }
   }
+
+
   fixNetworkData(): void {
     console.log('🔧 Fixing network data...');
 
@@ -200,89 +248,158 @@ export class AppComponent {
     this.statusClass = 'loading';
 
     setTimeout(() => {
-      this.networkData = {
-        nodes: [
-          { id: '1', label: 'Alice', group: 'A', size: 25 },      // String IDs
-          { id: '2', label: 'Bob', group: 'B', size: 20 },
-          { id: '3', label: 'Charlie', group: 'A', size: 22 },
-          { id: '4', label: 'Diana', group: 'C', size: 18 },
-          { id: '5', label: 'Eve', group: 'B', size: 24 },
-          { id: '6', label: 'Frank', group: 'C', size: 16 },
-          { id: '7', label: 'Grace', group: 'D', size: 21 },
-          { id: '8', label: 'Henry', group: 'D', size: 19 },
-          { id: '9', label: 'Iris', group: 'E', size: 23 },
-          { id: '10', label: 'Jack', group: 'E', size: 17 }
-        ],
-        links: [
-          { source: '1', target: '2', value: 3, width: 3 },      // String IDs
-          { source: '1', target: '3', value: 2, width: 2 },
-          { source: '2', target: '4', value: 1, width: 2 },
-          { source: '3', target: '5', value: 4, width: 4 },
-          { source: '4', target: '6', value: 2, width: 2 },
-          { source: '5', target: '7', value: 3, width: 3 },
-          { source: '6', target: '8', value: 1, width: 2 },
-          { source: '7', target: '9', value: 2, width: 2 },
-          { source: '8', target: '10', value: 3, width: 3 },
-          { source: '9', target: '10', value: 1, width: 2 },
-          { source: '1', target: '5', value: 2, width: 2 },
-          { source: '3', target: '7', value: 1, width: 2 },
-          { source: '2', target: '8', value: 2, width: 2 },
-          { source: '4', target: '9', value: 1, width: 2 }
-        ]
-      };
+      try {
+        this.networkData = {
+          nodes: [
+            { id: '1', label: 'Alice', group: 'A', size: 25 },
+            { id: '2', label: 'Bob', group: 'B', size: 20 },
+            { id: '3', label: 'Charlie', group: 'A', size: 22 },
+            { id: '4', label: 'Diana', group: 'C', size: 18 },
+            { id: '5', label: 'Eve', group: 'B', size: 24 },
+            { id: '6', label: 'Frank', group: 'C', size: 16 },
+            { id: '7', label: 'Grace', group: 'D', size: 21 },
+            { id: '8', label: 'Henry', group: 'D', size: 19 },
+            { id: '9', label: 'Iris', group: 'E', size: 23 },
+            { id: '10', label: 'Jack', group: 'E', size: 17 }
+          ],
+          links: [
+            { source: '1', target: '2', value: 3, width: 3 },
+            { source: '1', target: '3', value: 2, width: 2 },
+            { source: '2', target: '4', value: 1, width: 2 },
+            { source: '3', target: '5', value: 4, width: 4 },
+            { source: '4', target: '6', value: 2, width: 2 },
+            { source: '5', target: '7', value: 3, width: 3 },
+            { source: '6', target: '8', value: 1, width: 2 },
+            { source: '7', target: '9', value: 2, width: 2 },
+            { source: '8', target: '10', value: 3, width: 3 },
+            { source: '9', target: '10', value: 1, width: 2 },
+            { source: '1', target: '5', value: 2, width: 2 },
+            { source: '3', target: '7', value: 1, width: 2 },
+            { source: '2', target: '8', value: 2, width: 2 },
+            { source: '4', target: '9', value: 1, width: 2 }
+          ]
+        };
 
-      this.isLoading = false;
-      this.statusMessage = `✅ Loaded ${this.networkData.nodes.length} nodes and ${this.networkData.links.length} links successfully!`;
-      this.statusClass = 'success';
-      this.addEvent('system', 'Sample data loaded successfully');
+        this.hasDataBeenLoaded = true; // Mark that data has been loaded
+        this.isLoading = false;
+        this.statusMessage = `✅ Loaded ${this.networkData.nodes.length} nodes and ${this.networkData.links.length} links successfully!`;
+        this.statusClass = 'success';
+        this.addEvent('system', 'Sample data loaded successfully');
+
+        console.log('✅ App component: Data loaded successfully', this.networkData);
+
+      } catch (error) {
+        this.isLoading = false;
+        this.statusMessage = '❌ Failed to load sample data';
+        this.statusClass = 'error';
+        this.addEvent('system', 'Failed to load sample data');
+        console.error('❌ App component: Failed to load data', error);
+      }
     }, 1000);
   }
 
-  addRandomNode(): void {
-    const newId = Math.max(...this.networkData.nodes.map((n: any) => +n.id), 0) + 1;
-    const groups = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
-    const names = ['Alex', 'Morgan', 'Taylor', 'Jordan', 'Casey', 'Riley', 'Quinn', 'Sage'];
-
-    const randomGroup = groups[Math.floor(Math.random() * groups.length)];
-    const randomName = names[Math.floor(Math.random() * names.length)];
-
-    const newNode = {
-      id: newId,
-      label: `${randomName} ${newId}`,
-      group: randomGroup,
-      size: Math.floor(Math.random() * 10) + 15
-    };
-
-    // Add random connections
-    const existingNodes = this.networkData.nodes;
-    const numConnections = Math.min(Math.floor(Math.random() * 3) + 1, existingNodes.length);
-    const newLinks = [];
-
-    for (let i = 0; i < numConnections; i++) {
-      const targetNode = existingNodes[Math.floor(Math.random() * existingNodes.length)];
-      newLinks.push({
-        source: newId,
-        target: targetNode.id,
-        value: Math.floor(Math.random() * 3) + 1,
-        width: Math.floor(Math.random() * 3) + 2
-      });
+addRandomNode(): void {
+    if (!this.hasDataBeenLoaded) {
+      this.statusMessage = '⚠️ Please load sample data first';
+      return;
     }
 
-    // Create new data object to trigger change detection
-    this.networkData = {
-      nodes: [...this.networkData.nodes, newNode],
-      links: [...this.networkData.links, ...newLinks]
-    };
+    try {
+      // Get max ID as number, then convert back to string
+      const maxId = Math.max(...this.networkData.nodes.map((n: any) => parseInt(n.id)), 0);
+      const newId = (maxId + 1).toString(); // Convert to string
 
-    this.statusMessage = `Added ${newNode.label} with ${numConnections} connections`;
-    this.addEvent('system', `Added node: ${newNode.label} (Group ${randomGroup})`);
+      const groups = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+      const names = ['Alex', 'Morgan', 'Taylor', 'Jordan', 'Casey', 'Riley', 'Quinn', 'Sage'];
+
+      const randomGroup = groups[Math.floor(Math.random() * groups.length)];
+      const randomName = names[Math.floor(Math.random() * names.length)];
+
+      const newNode = {
+        id: newId, // String ID
+        label: `${randomName} ${newId}`,
+        group: randomGroup,
+        size: Math.floor(Math.random() * 10) + 15
+      };
+
+      // Add random connections
+      const existingNodes = this.networkData.nodes;
+      const numConnections = Math.min(Math.floor(Math.random() * 3) + 1, existingNodes.length);
+      const newLinks = [];
+
+      for (let i = 0; i < numConnections; i++) {
+        const targetNode = existingNodes[Math.floor(Math.random() * existingNodes.length)];
+        newLinks.push({
+          source: newId, // String ID
+          target: targetNode.id, // Should already be string
+          value: Math.floor(Math.random() * 3) + 1,
+          width: Math.floor(Math.random() * 3) + 2
+        });
+      }
+
+      // Create new data object to trigger change detection
+      this.networkData = {
+        nodes: [...this.networkData.nodes, newNode],
+        links: [...this.networkData.links, ...newLinks]
+      };
+
+      this.statusMessage = `Added ${newNode.label} with ${numConnections} connections`;
+      this.addEvent('system', `Added node: ${newNode.label} (Group ${randomGroup})`);
+
+      console.log('✅ App component: Added new node', newNode);
+
+    } catch (error) {
+      this.statusMessage = '❌ Failed to add random node';
+      this.addEvent('system', 'Failed to add random node');
+      console.error('❌ App component: Failed to add node', error);
+    }
   }
 
+
   clearData(): void {
-    this.networkData = { nodes: [], links: [] };
-    this.statusMessage = 'Network cleared - load sample data to start';
-    this.statusClass = 'error';
-    this.addEvent('system', 'Network data cleared');
+    try {
+      this.networkData = { nodes: [], links: [] };
+      this.hasDataBeenLoaded = false;
+      this.statusMessage = 'Network cleared - load sample data to start';
+      this.statusClass = 'error';
+      this.addEvent('system', 'Network data cleared');
+
+      console.log('✅ App component: Data cleared');
+
+    } catch (error) {
+      console.error('❌ App component: Failed to clear data', error);
+    }
+  }
+
+  onNodeClick(event: NetworkEvent): void {
+    if (event.data) {
+      const message = `Clicked: ${event.data.label || event.data.id} (Group ${event.data.group})`;
+      this.addEvent('nodeClick', message);
+      console.log('👆 Node clicked:', event.data);
+    }
+  }
+
+  onNodeHover(event: NetworkEvent): void {
+    if (event.data) {
+      const message = `Hovered: ${event.data.label || event.data.id}`;
+      this.addEvent('nodeHover', message);
+      // Don't log hover events as they're too frequent
+    }
+  }
+
+  onLinkClick(event: NetworkEvent): void {
+    if (event.data) {
+      const source = typeof event.data.source === 'object' ? event.data.source.id : event.data.source;
+      const target = typeof event.data.target === 'object' ? event.data.target.id : event.data.target;
+      const message = `Clicked link: ${source} → ${target} (strength: ${event.data.value})`;
+      this.addEvent('linkClick', message);
+      console.log('👆 Link clicked:', event.data);
+    }
+  }
+
+  onBackgroundClick(event: NetworkEvent): void {
+    this.addEvent('backgroundClick', 'Clicked background - selection cleared');
+    console.log('👆 Background clicked');
   }
 
   toggleTheme(): void {
@@ -340,29 +457,11 @@ export class AppComponent {
     return Array.from(groups) as string[];
   }
 
-  onNodeClick(event: NetworkEvent): void {
-    if (event.data) {
-      this.addEvent('nodeClick', `Clicked: ${event.data.label || event.data.id} (Group ${event.data.group})`);
-    }
-  }
 
-  onNodeHover(event: NetworkEvent): void {
-    if (event.data) {
-      this.addEvent('nodeHover', `Hovered: ${event.data.label || event.data.id}`);
-    }
-  }
 
-  onLinkClick(event: NetworkEvent): void {
-    if (event.data) {
-      const source = typeof event.data.source === 'object' ? event.data.source.id : event.data.source;
-      const target = typeof event.data.target === 'object' ? event.data.target.id : event.data.target;
-      this.addEvent('linkClick', `Clicked link: ${source} → ${target} (strength: ${event.data.value})`);
-    }
-  }
 
-  onBackgroundClick(event: NetworkEvent): void {
-    this.addEvent('backgroundClick', 'Clicked background - selection cleared');
-  }
+
+
 
   private addEvent(type: string, message: string): void {
     this.eventLog.unshift({

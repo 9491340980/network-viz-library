@@ -1,4 +1,4 @@
-// projects/network-viz-lib/src/lib/components/network-visualization/network-visualization-v2.component.ts
+// Complete NetworkVisualizationV2Component with all fixes
 import {
   Component,
   Input,
@@ -117,7 +117,7 @@ type D3DragBehavior = d3.DragBehavior<any, any, any>;
     .network-container {
       position: relative;
       overflow: hidden;
-      border: 1px solid #ddd;
+      border: 2px solid green !important; /* Debug border */
       border-radius: 4px;
       background-color: var(--background-color, #ffffff);
     }
@@ -189,30 +189,56 @@ type D3DragBehavior = d3.DragBehavior<any, any, any>;
     svg {
       display: block;
       cursor: grab;
+      border: 2px solid blue !important; /* Debug border */
+      background-color: #f0f0f0 !important; /* Light background */
     }
 
     svg:active {
       cursor: grabbing;
     }
 
-    /* D3 node and link styles */
+    /* FORCE VISIBILITY STYLES */
     :host ::ng-deep .node {
-      cursor: pointer;
-      stroke-width: 2px;
+      pointer-events: all !important;
+      cursor: pointer !important;
     }
 
-    :host ::ng-deep .node:hover {
-      stroke-width: 3px;
+    :host ::ng-deep .node circle {
+      fill: red !important;
+      stroke: blue !important;
+      stroke-width: 3px !important;
+      opacity: 1 !important;
+      display: block !important;
+      visibility: visible !important;
+    }
+
+    :host ::ng-deep .node rect {
+      fill: red !important;
+      stroke: blue !important;
+      stroke-width: 3px !important;
+      opacity: 1 !important;
+      display: block !important;
+      visibility: visible !important;
     }
 
     :host ::ng-deep .link {
-      stroke: #999;
-      stroke-opacity: 0.6;
+      stroke: green !important;
+      stroke-width: 3px !important;
+      opacity: 1 !important;
+      display: block !important;
+      visibility: visible !important;
+    }
+
+    :host ::ng-deep .zoom-group,
+    :host ::ng-deep .nodes-group,
+    :host ::ng-deep .links-group {
+      display: block !important;
+      visibility: visible !important;
     }
 
     :host ::ng-deep .node.highlighted {
       stroke: #ff6b35;
-      stroke-width: 3px;
+      stroke-width: 5px;
     }
 
     :host ::ng-deep .link.highlighted {
@@ -269,6 +295,10 @@ export class NetworkVisualizationV2Component implements OnInit, OnDestroy, OnCha
   private simulation!: D3Simulation;
   private zoom!: D3ZoomBehavior;
 
+  // Data references for simulation
+  private simulationNodes: NetworkNode[] = [];
+  private simulationLinks: NetworkLink[] = [];
+
   constructor(
     private stateService: NetworkStateService,
     private dataService: NetworkDataService,
@@ -277,8 +307,20 @@ export class NetworkVisualizationV2Component implements OnInit, OnDestroy, OnCha
   ) {}
 
   ngOnInit(): void {
-    this.initializeVisualization();
+    console.log('🔄 Component ngOnInit - checking if data is available');
+    console.log('Initial data:', this.data);
+
+    // DON'T initialize immediately - wait for data
+    // Just setup subscriptions
     this.subscribeToStateChanges();
+
+    // Only initialize if we have actual data
+    if (this.hasValidData()) {
+      console.log('✅ Data available during ngOnInit, initializing...');
+      this.initializeVisualization();
+    } else {
+      console.log('⏳ No data available during ngOnInit, waiting for data...');
+    }
   }
 
   ngOnDestroy(): void {
@@ -288,14 +330,71 @@ export class NetworkVisualizationV2Component implements OnInit, OnDestroy, OnCha
   }
 
   ngOnChanges(changes: SimpleChanges): void {
+    console.log('🔄 ngOnChanges triggered:', Object.keys(changes));
+
     if (changes['data'] && !changes['data'].firstChange) {
-      this.updateData();
+      console.log('📊 Data changed:', changes['data'].currentValue);
+      this.handleDataChange();
+    } else if (changes['data'] && changes['data'].firstChange) {
+      console.log('📊 First data change:', changes['data'].currentValue);
+      // This is the first time data is set
+      if (this.hasValidData()) {
+        console.log('✅ First valid data received, initializing visualization');
+        this.initializeVisualization();
+      }
     }
+
     if (changes['config'] && !changes['config'].firstChange) {
+      console.log('⚙️ Config changed');
       this.updateConfig();
     }
+
     if ((changes['width'] || changes['height']) && !changes['width']?.firstChange) {
+      console.log('📐 Dimensions changed');
       this.handleResize();
+    }
+  }
+
+  // Helper method to check if data is valid
+  private hasValidData(): boolean {
+    const isValid = !!(
+      this.data &&
+      this.data.nodes &&
+      this.data.links &&
+      this.data.nodes.length > 0
+    );
+
+    console.log(`📊 Data validation: ${isValid ? 'VALID' : 'INVALID'}`, {
+      hasData: !!this.data,
+      hasNodes: !!(this.data?.nodes),
+      hasLinks: !!(this.data?.links),
+      nodeCount: this.data?.nodes?.length || 0,
+      linkCount: this.data?.links?.length || 0
+    });
+
+    return isValid;
+  }
+
+  // Handle data changes
+  private handleDataChange(): void {
+    try {
+      if (!this.hasValidData()) {
+        console.log('⚠️ Invalid data provided, skipping update');
+        return;
+      }
+
+      console.log('🔄 Handling data change with valid data');
+
+      // Check if visualization is already initialized
+      if (this.svg) {
+        console.log('🔄 Updating existing visualization');
+        this.updateData();
+      } else {
+        console.log('🆕 Initializing visualization for first time');
+        this.initializeVisualization();
+      }
+    } catch (error) {
+      this.handleError(error);
     }
   }
 
@@ -390,8 +489,6 @@ export class NetworkVisualizationV2Component implements OnInit, OnDestroy, OnCha
     this.stateService.setError(null);
   }
 
-
-
   private setupSVG(): void {
     this.svg = d3.select(this.svgElement.nativeElement);
 
@@ -409,6 +506,8 @@ export class NetworkVisualizationV2Component implements OnInit, OnDestroy, OnCha
     // Create layers in correct order (links first, then nodes)
     this.g.append('g').attr('class', 'links-group');
     this.g.append('g').attr('class', 'nodes-group');
+
+    console.log('✅ SVG setup complete');
   }
 
   private setupZoom(): void {
@@ -430,147 +529,112 @@ export class NetworkVisualizationV2Component implements OnInit, OnDestroy, OnCha
         });
       }
     });
+
+    console.log('✅ Zoom setup complete');
   }
 
+  private renderNodes(nodes: NetworkNode[]): void {
+    const nodeGroup = this.g.select('.nodes-group');
 
+    // Use the SAME node objects that the simulation is modifying
+    const nodeSelection = nodeGroup.selectAll('.node')
+      .data(this.simulationNodes.length > 0 ? this.simulationNodes : nodes, (d: any) => d.id.toString());
 
+    // Remove old nodes
+    nodeSelection.exit().remove();
 
+    // Add new nodes
+    const nodeEnter: any = nodeSelection.enter()
+      .append('g')
+      .attr('class', 'node')
+      .attr('cursor', 'pointer');
 
-private renderNodes(nodes: NetworkNode[]): void {
-  const nodeGroup = this.g.select('.nodes-group');
+    // Add shapes with FORCED VISIBILITY
+    nodeEnter.each((d: any, i: number, nodeElements: any[]) => {
+      const nodeData = d as NetworkNode;
+      const element = d3.select(nodeElements[i]);
+      const shape = nodeData.shape || this.config.nodeStyles?.defaultShape || 'circle';
+      const size = nodeData.size || this.config.nodeStyles?.defaultSize || 20; // Bigger default
 
-  // Use the SAME node objects that the simulation is modifying
-  const nodeSelection = nodeGroup.selectAll('.node')
-    .data(this.simulationNodes.length > 0 ? this.simulationNodes : nodes, (d: any) => d.id.toString());
+      console.log(`🎨 Creating node ${nodeData.id} with shape: ${shape}, size: ${size}`);
 
-  // Remove old nodes
-  nodeSelection.exit().remove();
+      switch (shape) {
+        case 'circle':
+          element.append('circle')
+            .attr('r', size)
+            .attr('fill', 'red') // FORCE RED COLOR for debugging
+            .attr('stroke', 'blue') // FORCE BLUE BORDER for debugging
+            .attr('stroke-width', 3); // THICK BORDER for debugging
+          break;
+        case 'square':
+          element.append('rect')
+            .attr('width', size * 2)
+            .attr('height', size * 2)
+            .attr('x', -size)
+            .attr('y', -size)
+            .attr('fill', 'red') // FORCE RED COLOR for debugging
+            .attr('stroke', 'blue') // FORCE BLUE BORDER for debugging
+            .attr('stroke-width', 3); // THICK BORDER for debugging
+          break;
+        default:
+          element.append('circle')
+            .attr('r', size)
+            .attr('fill', 'red') // FORCE RED COLOR for debugging
+            .attr('stroke', 'blue') // FORCE BLUE BORDER for debugging
+            .attr('stroke-width', 3); // THICK BORDER for debugging
+      }
+    });
 
-  // Add new nodes
-  const nodeEnter: any = nodeSelection.enter()
-    .append('g')
-    .attr('class', 'node')
-    .attr('cursor', 'pointer');
+    // Merge enter and update selections
+    const nodeMerge = nodeEnter.merge(nodeSelection);
 
-  // Add shapes to nodes
-  nodeEnter.each((d: any, i: number, nodeElements: any[]) => {
-    const nodeData = d as NetworkNode;
-    const element = d3.select(nodeElements[i]);
-    const shape = nodeData.shape || this.config.nodeStyles?.defaultShape || 'circle';
-    const size = nodeData.size || this.config.nodeStyles?.defaultSize || 10;
+    // SKIP normal styling and FORCE visible styles
+    console.log('🎨 Forcing visible node styles...');
+    nodeMerge.selectAll('circle, rect')
+      .attr('fill', 'red')
+      .attr('stroke', 'blue')
+      .attr('stroke-width', 3)
+      .attr('opacity', 1); // Ensure fully opaque
 
-    switch (shape) {
-      case 'circle':
-        element.append('circle').attr('r', size);
-        break;
-      case 'square':
-        element.append('rect')
-          .attr('width', size * 2)
-          .attr('height', size * 2)
-          .attr('x', -size)
-          .attr('y', -size);
-        break;
-      default:
-        element.append('circle').attr('r', size);
+    // Add interactions
+    this.addNodeInteractions(nodeMerge);
+
+    // Setup drag behavior
+    if (this.config.interactionConfig?.enableDrag !== false) {
+      this.setupNodeDrag(nodeMerge);
     }
-  });
 
-  // Merge enter and update selections
-  const nodeMerge = nodeEnter.merge(nodeSelection);
-
-  // Apply styles and interactions
-  this.applyNodeStyles(nodeMerge);
-  this.addNodeInteractions(nodeMerge);
-
-  if (this.config.interactionConfig?.enableDrag !== false) {
-    this.setupNodeDrag(nodeMerge);
-  }
-}
-
-private renderLinks(links: NetworkLink[]): void {
-  const linkGroup: any = this.g.select('.links-group');
-
-  // Use the SAME link objects that the simulation is modifying
-  const linkSelection = linkGroup.selectAll('.link')
-    .data(this.simulationLinks.length > 0 ? this.simulationLinks : links);
-
-  // Remove old links
-  linkSelection.exit().remove();
-
-  // Add new links
-  const linkEnter = linkSelection.enter()
-    .append('line')
-    .attr('class', 'link');
-
-  // Merge and apply styles
-  const linkMerge = linkEnter.merge(linkSelection);
-  this.applyLinkStyles(linkMerge);
-  this.addLinkInteractions(linkMerge);
-}
-
-// Fixed render method
-private render(): void {
-  try {
-    // Validate and sanitize data first
-    const cleanData = this.validateAndSanitizeData(this.data);
-
-    // Setup force simulation with clean data - this modifies the data objects
-    this.setupSimulation(cleanData);
-
-    // Render with the SAME data objects that simulation is using
-    this.renderLinks(cleanData.links);
-    this.renderNodes(cleanData.nodes);
-
-    // Generate legend items
-    this.generateLegendItems(cleanData);
-
-    // Apply initial zoom if configured
-    this.applyInitialZoom();
-
-  } catch (error) {
-    this.handleError(error);
-  }
-}
-
-  private applyNodeStyles(nodeSelection: D3Selection): void {
-    nodeSelection.selectAll('circle, rect')
-      .attr('fill', (d: any) => {
-        const nodeData = d as NetworkNode;
-        if (nodeData.color) return nodeData.color;
-        if (nodeData.group && this.config.nodeStyles?.groupColors?.[nodeData.group]) {
-          return this.config.nodeStyles.groupColors[nodeData.group];
-        }
-        return this.config.nodeStyles?.defaultColor || '#69b3a2';
-      })
-      .attr('stroke', (d: any) => {
-        const nodeData = d as NetworkNode;
-        return nodeData.borderColor || this.config.nodeStyles?.defaultBorderColor || '#ffffff';
-      })
-      .attr('stroke-width', (d: any) => {
-        const nodeData = d as NetworkNode;
-        return nodeData.borderWidth || this.config.nodeStyles?.defaultBorderWidth || 2;
-      });
+    console.log('✅ renderNodes complete with forced styling');
   }
 
-  private applyLinkStyles(linkSelection: D3Selection): void {
-    linkSelection
-      .attr('stroke', (d: any) => {
-        const linkData = d as NetworkLink;
-        return linkData.color || this.config.linkStyles?.defaultColor || '#999999';
-      })
-      .attr('stroke-width', (d: any) => {
-        const linkData = d as NetworkLink;
-        return linkData.width || this.config.linkStyles?.defaultWidth || 1;
-      })
-      .attr('stroke-dasharray', (d: any) => {
-        const linkData = d as NetworkLink;
-        const style = linkData.style || this.config.linkStyles?.defaultStyle || 'solid';
-        switch (style) {
-          case 'dashed': return '5,5';
-          case 'dotted': return '2,3';
-          default: return 'none';
-        }
-      });
+  private renderLinks(links: NetworkLink[]): void {
+    const linkGroup: any = this.g.select('.links-group');
+
+    // Use the SAME link objects that the simulation is modifying
+    const linkSelection = linkGroup.selectAll('.link')
+      .data(this.simulationLinks.length > 0 ? this.simulationLinks : links);
+
+    // Remove old links
+    linkSelection.exit().remove();
+
+    // Add new links
+    const linkEnter = linkSelection.enter()
+      .append('line')
+      .attr('class', 'link')
+      .attr('stroke', 'green') // FORCE GREEN for debugging
+      .attr('stroke-width', 3); // THICK for debugging
+
+    // Merge and apply styles
+    const linkMerge = linkEnter.merge(linkSelection);
+    linkMerge
+      .attr('stroke', 'green')
+      .attr('stroke-width', 3)
+      .attr('opacity', 1);
+
+    // Add link interactions
+    this.addLinkInteractions(linkMerge);
+
+    console.log('✅ renderLinks complete');
   }
 
   private addNodeInteractions(nodeSelection: D3Selection): void {
@@ -644,38 +708,82 @@ private render(): void {
     nodeSelection.call(dragHandler);
   }
 
- private updatePositions(): void {
-  // Update node positions - now reading from simulation-modified objects
-  this.g.selectAll('.node')
-    .attr('transform', (d: any) => {
-      const nodeData = d as NetworkNode;
-      // These x,y values are now updated by the simulation
-      return `translate(${nodeData.x || 0},${nodeData.y || 0})`;
+  private updatePositions(): void {
+    console.log('🎯 updatePositions called');
+
+    // Debug: Log actual position values
+    if (this.simulationNodes.length > 0) {
+      console.log('📍 First 3 node positions:');
+      this.simulationNodes.slice(0, 3).forEach(n => {
+        console.log(`  Node ${n.id}: x=${n.x?.toFixed(1)}, y=${n.y?.toFixed(1)}, fx=${n.fx}, fy=${n.fy}`);
+      });
+    }
+
+    // Update node positions
+    const nodeElements = this.g.selectAll('.node');
+    console.log('🔍 Found node elements:', nodeElements.size());
+
+    nodeElements
+      .attr('transform', (d: any) => {
+        const nodeData:any = d as NetworkNode;
+        const x = nodeData.x || 0;
+        const y = nodeData.y || 0;
+
+        const transform = `translate(${x},${y})`;
+
+        // Debug first few transforms
+        if (parseInt(nodeData.id) <= 3) {
+          console.log(`🎨 Node ${nodeData.id} transform: ${transform}`);
+        }
+
+        return transform;
+      });
+
+    // DEBUG: Check if nodes have visual elements
+    nodeElements.each(function(d: any, i: number) {
+      if (i < 3) { // Only check first 3
+        const element = d3.select(this);
+        const circles = element.selectAll('circle');
+        const rects = element.selectAll('rect');
+
+        console.log(`🔍 Node ${i} DOM:`, {
+          id: d.id,
+          circles: circles.size(),
+          rects: rects.size(),
+          transform: element.attr('transform'),
+          circleR: circles.size() > 0 ? circles.attr('r') : 'none',
+          circleFill: circles.size() > 0 ? circles.attr('fill') : 'none',
+          circleStroke: circles.size() > 0 ? circles.attr('stroke') : 'none'
+        });
+      }
     });
 
-  // Update link positions - now reading from simulation-modified objects
-  this.g.selectAll('.link')
-    .attr('x1', (d: any) => {
-      const linkData = d as NetworkLink;
-      const source = linkData.source as NetworkNode;
-      return source.x || 0;
-    })
-    .attr('y1', (d: any) => {
-      const linkData = d as NetworkLink;
-      const source = linkData.source as NetworkNode;
-      return source.y || 0;
-    })
-    .attr('x2', (d: any) => {
-      const linkData = d as NetworkLink;
-      const target:any = linkData.target as NetworkLink;
-      return target.x || 0;
-    })
-    .attr('y2', (d: any) => {
-      const linkData = d as NetworkLink;
-      const target = linkData.target as NetworkNode;
-      return target.y || 0;
-    });
-}
+    // Update link positions
+    const linkElements = this.g.selectAll('.link');
+    console.log('🔍 Found link elements:', linkElements.size());
+
+    linkElements
+      .attr('x1', (d: any) => {
+        const linkData = d as NetworkLink;
+        const source = linkData.source as NetworkNode;
+        return source.x || 0;
+      })
+      .attr('y1', (d: any) => {
+        const linkData = d as NetworkLink;
+        const source = linkData.source as NetworkNode;
+        return source.y || 0;
+      })
+      .attr('x2', (d: any) => {
+        const linkData = d as NetworkLink;
+        const target = linkData.target as NetworkNode;
+        return target.x || 0;
+      })
+      .attr('y2', (d: any) => {
+        const linkData = d as NetworkLink;
+        const target = linkData.target as NetworkNode;
+        return target.y || 0;
+      });
+  }
 
   private generateLegendItems(data: NetworkData): void {
     const items: LegendItem[] = [];
@@ -807,191 +915,355 @@ private render(): void {
     }
   }
 
-
   private validateAndSanitizeData(data: NetworkData): NetworkData {
-  // Ensure all nodes have valid IDs
-  const validNodes = data.nodes.filter(node =>
-    node.id !== null &&
-    node.id !== undefined &&
-    node.id !== ''
-  );
+    console.log('🧹 Starting data validation and sanitization');
+    console.log('Input data:', { nodeCount: data.nodes?.length || 0, linkCount: data.links?.length || 0 });
 
-  if (validNodes.length !== data.nodes.length) {
-    console.warn(`Removed ${data.nodes.length - validNodes.length} invalid nodes`);
-  }
-
-  // Create a map of valid node IDs for quick lookup
-  const nodeIdMap = new Map();
-  validNodes.forEach(node => {
-    // Normalize ID to string for consistent comparison
-    const normalizedId = node.id.toString();
-    nodeIdMap.set(normalizedId, node);
-    // Ensure the node ID is consistently a string
-    node.id = normalizedId;
-  });
-
-  // Filter links to only include those with valid source and target nodes
-  const validLinks = data.links.filter(link => {
-    const sourceId = (typeof link.source === 'object' ? link.source.id : link.source).toString();
-    const targetId = (typeof link.target === 'object' ? link.target.id : link.target).toString();
-
-    const hasValidSource = nodeIdMap.has(sourceId);
-    const hasValidTarget = nodeIdMap.has(targetId);
-
-    if (!hasValidSource) {
-      console.warn(`Link references invalid source node: ${sourceId}`);
-    }
-    if (!hasValidTarget) {
-      console.warn(`Link references invalid target node: ${targetId}`);
+    // Guard against null/undefined data
+    if (!data || !data.nodes || !data.links) {
+      console.error('❌ Invalid data structure provided');
+      return { nodes: [], links: [] };
     }
 
-    return hasValidSource && hasValidTarget;
-  }).map(link => ({
-    ...link,
-    // Normalize source and target to string IDs
-    source: (typeof link.source === 'object' ? link.source.id : link.source).toString(),
-    target: (typeof link.target === 'object' ? link.target.id : link.target).toString()
-  }));
+    // Ensure all nodes have valid IDs
+    const validNodes = data.nodes.filter(node =>
+      node.id !== null &&
+      node.id !== undefined &&
+      node.id !== ''
+    );
 
-  if (validLinks.length !== data.links.length) {
-    console.warn(`Removed ${data.links.length - validLinks.length} invalid links`);
-  }
-
-  console.log(`Data validation complete: ${validNodes.length} nodes, ${validLinks.length} links`);
-
-  return {
-    nodes: validNodes,
-    links: validLinks
-  };
-}
-// Add these properties to store simulation data references
-private simulationNodes: NetworkNode[] = [];
-private simulationLinks: NetworkLink[] = [];
-
-private setupSimulation(data: NetworkData): void {
-  try {
-    // Stop existing simulation
-    if (this.simulation) {
-      this.simulation.stop();
+    if (validNodes.length !== data.nodes.length) {
+      console.warn(`🧹 Removed ${data.nodes.length - validNodes.length} invalid nodes`);
     }
 
-    if (!data.nodes || data.nodes.length === 0) {
-      console.warn('No nodes to simulate');
-      return;
-    }
-
-    // DON'T create copies - work directly with the data objects
-    // D3 will modify these objects by adding x, y, vx, vy properties
-    const nodes = data.nodes;
-    const links = data.links;
-
-    // Ensure all node IDs are strings for consistency
-    nodes.forEach(node => {
-      node.id = node.id.toString();
-      // Initialize positions if not present
-      if (node.x === undefined) node.x = Math.random() * this.width;
-      if (node.y === undefined) node.y = Math.random() * this.height;
+    // Create a map of valid node IDs for quick lookup
+    const nodeIdMap = new Map();
+    validNodes.forEach(node => {
+      // Normalize ID to string for consistent comparison
+      const normalizedId = node.id.toString();
+      nodeIdMap.set(normalizedId, node);
+      // Ensure the node ID is consistently a string
+      node.id = normalizedId;
     });
 
-    // Create node ID set for validation
-    const nodeIds = new Set(nodes.map(n => n.id));
-
-    // Validate and prepare links
-    const validLinks = links.filter(link => {
+    // Filter links to only include those with valid source and target nodes
+    const validLinks = data.links.filter(link => {
       const sourceId = (typeof link.source === 'object' ? link.source.id : link.source).toString();
       const targetId = (typeof link.target === 'object' ? link.target.id : link.target).toString();
 
-      const isValid = nodeIds.has(sourceId) && nodeIds.has(targetId);
-      if (!isValid) {
-        console.warn(`Skipping invalid link: ${sourceId} -> ${targetId}`);
+      const hasValidSource = nodeIdMap.has(sourceId);
+      const hasValidTarget = nodeIdMap.has(targetId);
+
+      if (!hasValidSource) {
+        console.warn(`🧹 Link references invalid source node: ${sourceId}`);
       }
-      return isValid;
+      if (!hasValidTarget) {
+        console.warn(`🧹 Link references invalid target node: ${targetId}`);
+      }
+
+      return hasValidSource && hasValidTarget;
     }).map(link => ({
       ...link,
+      // Normalize source and target to string IDs
       source: (typeof link.source === 'object' ? link.source.id : link.source).toString(),
       target: (typeof link.target === 'object' ? link.target.id : link.target).toString()
     }));
 
-    console.log(`Creating simulation: ${nodes.length} nodes, ${validLinks.length} valid links`);
-
-    // Create simulation with the SAME node objects that will be used in rendering
-    this.simulation = d3.forceSimulation(nodes)
-      .force('link', d3.forceLink(validLinks)
-        .id((d: any) => d.id)
-        .distance(this.config.forceConfig?.linkDistance || 50)
-        .strength(this.config.forceConfig?.linkStrength || 0.1)
-      )
-      .force('charge', d3.forceManyBody()
-        .strength(this.config.forceConfig?.chargeStrength || -300)
-      )
-      .force('center', d3.forceCenter(this.width / 2, this.height / 2)
-        .strength(this.config.forceConfig?.centerStrength || 1)
-      )
-      .force('collision', d3.forceCollide()
-        .radius((d: any) => (d.size || 10) + 5)
-        .strength(0.7)
-      )
-      .velocityDecay(this.config.forceConfig?.velocityDecay || 0.4)
-      .alphaDecay(this.config.forceConfig?.alphaDecay || 0.0228);
-
-    // Store references to the data being used by simulation
-    this.simulationNodes = nodes;
-    this.simulationLinks = validLinks;
-
-    // Handle tick events - this updates positions
-    this.simulation.on('tick', () => {
-      this.updatePositions();
-    });
-
-    // Handle simulation end
-    this.simulation.on('end', () => {
-      console.log('Simulation ended');
-    });
-
-    console.log('✅ Simulation created successfully');
-
-  } catch (error) {
-    console.error('❌ Simulation creation failed:', error);
-    this.handleError(error);
-  }
-}
-
-
-// Update the initializeVisualization method to include better validation
-private initializeVisualization(): void {
-  try {
-    this.isLoadingSignal.set(true);
-
-    // Basic validation
-    if (!this.data || !this.data.nodes || !this.data.links) {
-      throw new Error('Invalid data structure: nodes and links arrays are required');
+    if (validLinks.length !== data.links.length) {
+      console.warn(`🧹 Removed ${data.links.length - validLinks.length} invalid links`);
     }
 
-    // Validate data structure
-    const validation = this.dataService.validateNetworkData(this.data);
-    if (!validation.isValid) {
-      console.warn('Data validation warnings:', validation.warnings);
-      // Don't throw error for warnings, just log them
-      if (validation.errors.length > 0) {
-        throw new Error(`Data validation failed: ${validation.errors.join(', ')}`);
+    const result = {
+      nodes: validNodes,
+      links: validLinks
+    };
+
+    console.log(`✅ Data validation complete: ${validNodes.length} nodes, ${validLinks.length} links`);
+
+    return result;
+  }
+
+  private setupSimulation(data: NetworkData): void {
+    try {
+      if (this.simulation) {
+        this.simulation.stop();
       }
+
+      if (!data.nodes || data.nodes.length === 0) {
+        console.warn('No nodes to simulate');
+        return;
+      }
+
+      // Work directly with the data objects (don't copy)
+      const nodes = data.nodes;
+      const links = data.links;
+
+      // CRITICAL: Initialize node positions if not present
+      nodes.forEach((node, index) => {
+        node.id = node.id.toString();
+
+        // Give each node a different starting position to avoid overlap
+        if (node.x === undefined || node.y === undefined) {
+          // Spread nodes in a circle initially
+          const angle = (index / nodes.length) * 2 * Math.PI;
+          const radius = Math.min(this.width, this.height) * 0.3;
+          node.x = this.width / 2 + Math.cos(angle) * radius;
+          node.y = this.height / 2 + Math.sin(angle) * radius;
+
+          console.log(`🎯 Initialized node ${node.id} at (${node.x.toFixed(1)}, ${node.y.toFixed(1)})`);
+        }
+      });
+
+      // Validate and prepare links
+      const nodeIds = new Set(nodes.map(n => n.id));
+      const validLinks = links.filter(link => {
+        const sourceId = (typeof link.source === 'object' ? link.source.id : link.source).toString();
+        const targetId = (typeof link.target === 'object' ? link.target.id : link.target).toString();
+
+        const isValid = nodeIds.has(sourceId) && nodeIds.has(targetId);
+        if (!isValid) {
+          console.warn(`Skipping invalid link: ${sourceId} -> ${targetId}`);
+        }
+        return isValid;
+      }).map(link => ({
+        ...link,
+        source: (typeof link.source === 'object' ? link.source.id : link.source).toString(),
+        target: (typeof link.target === 'object' ? link.target.id : link.target).toString()
+      }));
+
+      console.log(`Creating simulation: ${nodes.length} nodes, ${validLinks.length} valid links`);
+
+      // Store references to the data being used by simulation
+      this.simulationNodes = nodes;
+      this.simulationLinks = validLinks;
+
+      // Create simulation with stronger forces
+      this.simulation = d3.forceSimulation(nodes)
+        .force('link', d3.forceLink(validLinks)
+          .id((d: any) => d.id)
+          .distance(this.config.forceConfig?.linkDistance || 80) // Increased distance
+          .strength(this.config.forceConfig?.linkStrength || 0.2) // Increased strength
+        )
+        .force('charge', d3.forceManyBody()
+          .strength(this.config.forceConfig?.chargeStrength || -400) // Stronger repulsion
+        )
+        .force('center', d3.forceCenter(this.width / 2, this.height / 2)
+          .strength(this.config.forceConfig?.centerStrength || 0.5) // Moderate centering
+        )
+        .force('collision', d3.forceCollide()
+          .radius((d: any) => (d.size || 15) + 10) // Bigger collision radius
+          .strength(0.8) // Strong collision avoidance
+        )
+        .velocityDecay(this.config.forceConfig?.velocityDecay || 0.3) // Slower decay
+        .alphaDecay(this.config.forceConfig?.alphaDecay || 0.01); // Much slower alpha decay
+
+      // Enhanced tick event with debugging
+      let tickCount = 0;
+      this.simulation.on('tick', () => {
+        tickCount++;
+        if (tickCount % 10 === 0) { // Log every 10th tick
+          console.log(`⚡ Tick ${tickCount}, alpha: ${this.simulation.alpha().toFixed(3)}`);
+        }
+        this.updatePositions();
+      });
+
+      // Log when simulation starts and ends
+      this.simulation.on('end', () => {
+        console.log(`🏁 Simulation ended after ${tickCount} ticks`);
+        console.log('Final positions:', nodes.slice(0, 3).map(n => ({ id: n.id, x: n.x, y: n.y })));
+      });
+
+      console.log('✅ Simulation created successfully');
+
+    } catch (error) {
+      console.error('❌ Simulation creation failed:', error);
+      this.handleError(error);
+    }
+  }
+
+  private render(): void {
+    try {
+      console.log('🎨 Starting render process');
+
+      // Double-check we have valid data
+      if (!this.hasValidData()) {
+        console.warn('❌ Cannot render: no valid data');
+        return;
+      }
+
+      // Validate and sanitize data first
+      const cleanData = this.validateAndSanitizeData(this.data);
+
+      // Final check after sanitization
+      if (cleanData.nodes.length === 0) {
+        console.warn('❌ Cannot render: no nodes after sanitization');
+        return;
+      }
+
+      console.log(`🎨 Rendering ${cleanData.nodes.length} nodes and ${cleanData.links.length} links`);
+
+      // Setup force simulation with clean data
+      this.setupSimulation(cleanData);
+
+      // Render with clean data
+      this.renderLinks(cleanData.links);
+      this.renderNodes(cleanData.nodes);
+
+      // Generate legend items
+      this.generateLegendItems(cleanData);
+
+      // Apply initial zoom if configured
+      this.applyInitialZoom();
+
+      console.log('✅ Render complete');
+
+    } catch (error) {
+      console.error('❌ Render failed:', error);
+      this.handleError(error);
+    }
+  }
+
+  private initializeVisualization(): void {
+    try {
+      console.log('🚀 Starting visualization initialization');
+
+      // Guard against invalid data
+      if (!this.hasValidData()) {
+        console.warn('❌ Cannot initialize visualization: no valid data');
+        return;
+      }
+
+      this.isLoadingSignal.set(true);
+
+      // Validate data structure
+      const validation = this.dataService.validateNetworkData(this.data);
+      if (!validation.isValid) {
+        console.warn('⚠️ Data validation warnings:', validation.warnings);
+        if (validation.errors.length > 0) {
+          throw new Error(`Data validation failed: ${validation.errors.join(', ')}`);
+        }
+      }
+
+      // Update signals with original data count
+      this.nodeCountSignal.set(this.data.nodes.length);
+      this.linkCountSignal.set(this.data.links.length);
+
+      console.log(`📊 Initializing with ${this.data.nodes.length} nodes and ${this.data.links.length} links`);
+
+      // Initialize D3 SVG (only if not already done)
+      if (!this.svg) {
+        this.setupSVG();
+        this.setupZoom();
+      }
+
+      this.render();
+
+      this.isLoadingSignal.set(false);
+      console.log('✅ Visualization initialized successfully');
+
+    } catch (error) {
+      this.isLoadingSignal.set(false);
+      this.handleError(error);
+    }
+  }
+
+  // Debug methods
+  debugVisualization(): void {
+    console.log('🔍 DEBUG: Complete Visualization State');
+
+    // Check SVG
+    if (this.svg) {
+      const svgNode = this.svg.node() as SVGElement;
+      console.log('📐 SVG info:', {
+        width: svgNode.getAttribute('width'),
+        height: svgNode.getAttribute('height'),
+        viewBox: svgNode.getAttribute('viewBox'),
+        display: window.getComputedStyle(svgNode).display,
+        visibility: window.getComputedStyle(svgNode).visibility
+      });
     }
 
-    // Update signals with original data count
-    this.nodeCountSignal.set(this.data.nodes.length);
-    this.linkCountSignal.set(this.data.links.length);
+    // Check zoom group
+    if (this.g) {
+      const gNode = this.g.node() as SVGGElement;
+      console.log('🔍 Zoom group info:', {
+        transform: gNode.getAttribute('transform'),
+        childElementCount: gNode.childElementCount
+      });
+    }
 
-    // Initialize D3 SVG
-    this.setupSVG();
-    this.setupZoom();
-    this.render();
+    // Check nodes in detail
+    if (this.g) {
+      const nodeElements = this.g.selectAll('.node');
+      console.log('🔍 Node elements detailed check:');
 
-    this.isLoadingSignal.set(false);
-    console.log('✅ Visualization initialized successfully');
+      nodeElements.each(function(d: any, i: number) {
+        if (i < 5) { // Check first 5 nodes
+          const element = this as SVGGElement;
+          const d3Element = d3.select(element);
 
-  } catch (error) {
-    this.isLoadingSignal.set(false);
-    this.handleError(error);
+          console.log(`Node ${i} (id: ${d.id}):`);
+          console.log('  Transform:', element.getAttribute('transform'));
+          console.log('  Child elements:', element.childElementCount);
+
+          // Check circles
+          const circles = d3Element.selectAll('circle');
+          circles.each(function() {
+            const circle = this as SVGCircleElement;
+            console.log('  Circle:', {
+              r: circle.getAttribute('r'),
+              fill: circle.getAttribute('fill'),
+              stroke: circle.getAttribute('stroke'),
+              strokeWidth: circle.getAttribute('stroke-width'),
+              opacity: circle.getAttribute('opacity'),
+              computedFill: window.getComputedStyle(circle).fill,
+              computedDisplay: window.getComputedStyle(circle).display
+            });
+          });
+        }
+      });
+    }
+
+    // Check simulation
+    console.log('⚡ Simulation info:', {
+      exists: !!this.simulation,
+      alpha: this.simulation?.alpha(),
+      nodes: this.simulationNodes?.length || 0,
+      links: this.simulationLinks?.length || 0
+    });
   }
-}
+
+  forceRepositionNodes(): void {
+    console.log('🔄 Force repositioning nodes');
+
+    if (this.simulationNodes && this.simulationNodes.length > 0) {
+      // Spread nodes in a grid pattern
+      const cols = Math.ceil(Math.sqrt(this.simulationNodes.length));
+      const rows = Math.ceil(this.simulationNodes.length / cols);
+      const cellWidth = this.width / (cols + 1);
+      const cellHeight = this.height / (rows + 1);
+
+      this.simulationNodes.forEach((node, index) => {
+        const col = index % cols;
+        const row = Math.floor(index / cols);
+
+        node.x = (col + 1) * cellWidth;
+        node.y = (row + 1) * cellHeight;
+
+        // Clear fixed positions
+        node.fx = null;
+        node.fy = null;
+
+        console.log(`📍 Repositioned node ${node.id} to (${node.x}, ${node.y})`);
+      });
+
+      // Restart simulation with higher alpha
+      if (this.simulation) {
+        this.simulation.alpha(1).restart();
+      }
+
+      // Force immediate position update
+      this.updatePositions();
+    }
+  }
 }
