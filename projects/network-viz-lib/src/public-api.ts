@@ -17,6 +17,12 @@ export * from './lib/services/network-state.service';
 export * from './lib/services/network-data.service';
 export * from './lib/services/network-error.service';
 export * from './lib/services/network-config-builder.service';
+export * from './lib/services/d3-abstraction.service';
+export * from './lib/services/network-renderer.service';
+export * from './lib/services/network-plugin.service';
+export * from './lib/services/network-performance.service';
+export * from './lib/services/network-cache.service';
+
 
 // Interfaces
 export * from './lib/interfaces/network-visualization.interfaces';
