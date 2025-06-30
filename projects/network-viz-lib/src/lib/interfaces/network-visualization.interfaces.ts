@@ -1,4 +1,3 @@
-// Core Network Interfaces
 export interface NetworkNode {
   id: string | number;
   label?: string;
@@ -9,25 +8,21 @@ export interface NetworkNode {
   shape?: NodeShape;
   borderColor?: string;
   borderWidth?: number;
-  borderStyle?: BorderStyle;
-  fillColor?: string;
   x?: number;
   y?: number;
-  fx?: number; // Fixed position
-  fy?: number;
-  [key: string]: any; // Allow custom properties
+  fx?: number | null;
+  fy?: number | null;
+  [key: string]: any;
 }
 
 export interface NetworkLink {
   source: string | number | NetworkNode;
   target: string | number | NetworkNode;
-  id?: string;
   label?: string;
+  value?: number;
   color?: string;
   width?: number;
   style?: LineStyle;
-  strength?: number;
-  distance?: number;
   [key: string]: any;
 }
 
@@ -36,12 +31,51 @@ export interface NetworkData {
   links: NetworkLink[];
 }
 
-// Shape and Style Types
 export type NodeShape = 'circle' | 'square' | 'triangle' | 'diamond' | 'star' | 'hexagon';
-export type BorderStyle = 'solid' | 'dashed' | 'dotted';
 export type LineStyle = 'solid' | 'dashed' | 'dotted';
+export type BorderStyle = 'solid' | 'dashed' | 'dotted' | 'none';
 
-// Configuration Interfaces
+export interface TooltipConfig {
+  enabled?: boolean;
+  showNodeId?: boolean;
+  showNodeLabel?: boolean;
+  showNodeGroup?: boolean;
+  showNodeCategory?: boolean;
+  showCustomFields?: string[];
+  customTemplate?: (node: NetworkNode) => string;
+  customLinkTemplate?: (link: NetworkLink) => string;
+  backgroundColor?: string;
+  textColor?: string;
+  fontSize?: number;
+  maxWidth?: number;
+  borderRadius?: number;
+  padding?: string;
+  showDelay?: number;
+  hideDelay?: number;
+}
+
+export interface LabelConfig {
+  enabled?: boolean;
+  showFor?: 'all' | 'none' | 'selected' | 'hovered';
+  field?: keyof NetworkNode | 'id' | 'label' | ((node: NetworkNode) => string);
+  formatter?: (value: any, node: NetworkNode) => string;
+  maxLength?: number;
+  truncateStyle?: 'ellipsis' | 'middle' | 'none';
+  position?: 'center' | 'top' | 'bottom' | 'left' | 'right';
+  offset?: { x: number; y: number };
+  fontSize?: number;
+  fontFamily?: string;
+  fontWeight?: string | number;
+  color?: string;
+  backgroundColor?: string;
+  padding?: number;
+  borderRadius?: number;
+  showBackground?: boolean;
+  wrapText?: boolean;
+  lineHeight?: number;
+  textAlign?: 'left' | 'center' | 'right';
+}
+
 export interface NodeStyleConfig {
   defaultSize?: number;
   defaultColor?: string;
@@ -100,74 +134,26 @@ export interface ZoomConfig {
   smoothTransitions?: boolean;
 }
 
-export interface LegendItem {
-  label: string;
-  color: string;
-  shape?: NodeShape;
-  size?: number;
-  visible?: boolean;
-}
-
 export interface LegendConfig {
   enabled?: boolean;
-  position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'custom';
-  customPosition?: { x: number; y: number };
-  orientation?: 'vertical' | 'horizontal';
-  title?: string;
-  maxWidth?: number;
-  maxHeight?: number;
+  position?: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
   backgroundColor?: string;
+  textColor?: string;
   borderColor?: string;
   borderRadius?: number;
   padding?: number;
   fontSize?: number;
-  itemSpacing?: number;
-  symbolSize?: number;
+  showShapes?: boolean;
+  showColors?: boolean;
+  showSizes?: boolean;
   customItems?: LegendItem[];
-  showGroupColors?: boolean;
-  showCategoryColors?: boolean;
-  itemTemplate?: (item: LegendItem) => string;
 }
 
-export interface TooltipConfig {
-  enabled?: boolean;
-  showNodeId?: boolean;
-  showNodeLabel?: boolean;
-  showNodeGroup?: boolean;
-  showNodeCategory?: boolean;
-  showCustomFields?: string[];
-  customTemplate?: (node: NetworkNode) => string;
-  customLinkTemplate?: (link: NetworkLink) => string;
-  backgroundColor?: string;
-  textColor?: string;
-  fontSize?: number;
-  maxWidth?: number;
-  borderRadius?: number;
-  padding?: string;
-  showDelay?: number;
-  hideDelay?: number;
-}
-
-export interface LabelConfig {
-  enabled?: boolean;
-  showFor?: 'all' | 'none' | 'selected' | 'hovered';
-  field?: keyof NetworkNode | 'id' | 'label' | ((node: NetworkNode) => string);
-  formatter?: (value: any, node: NetworkNode) => string;
-  maxLength?: number;
-  truncateStyle?: 'ellipsis' | 'middle' | 'none';
-  position?: 'center' | 'top' | 'bottom' | 'left' | 'right';
-  offset?: { x: number; y: number };
-  fontSize?: number;
-  fontFamily?: string;
-  fontWeight?: string | number;
+export interface LegendItem {
+  label: string;
   color?: string;
-  backgroundColor?: string;
-  padding?: number;
-  borderRadius?: number;
-  showBackground?: boolean;
-  wrapText?: boolean;
-  lineHeight?: number;
-  textAlign?: 'left' | 'center' | 'right';
+  shape?: NodeShape;
+  size?: number;
 }
 
 export interface NetworkVisualizationConfig {
@@ -182,7 +168,7 @@ export interface NetworkVisualizationConfig {
   labelConfig?: LabelConfig;
   zoomConfig?: ZoomConfig;
   backgroundColor?: string;
-  // Backward compatibility
+  // Deprecated properties for backward compatibility
   enableLegend?: boolean;
   enableTooltip?: boolean;
   enableLabels?: boolean;
@@ -190,7 +176,6 @@ export interface NetworkVisualizationConfig {
   labelColor?: string;
 }
 
-// Event Interfaces
 export interface NetworkEvent<T = any> {
   type: 'nodeClick' | 'nodeHover' | 'nodeRightClick' | 'linkClick' | 'linkHover' | 'backgroundClick';
   data?: T;
@@ -205,61 +190,8 @@ export interface NetworkError {
   context?: any;
 }
 
-// Validation Interfaces
 export interface ValidationResult {
   isValid: boolean;
   errors: string[];
   warnings: string[];
-}
-
-// Plugin Interfaces
-export interface PluginContext {
-  data: NetworkData;
-  config: NetworkVisualizationConfig;
-  svg: any;
-  injector: any;
-}
-
-export interface RenderContext {
-  svg: any;
-  nodes: NetworkNode[];
-  links: NetworkLink[];
-}
-
-export interface PluginAction {
-  id: string;
-  label: string;
-  icon?: string;
-  execute: () => void;
-}
-
-export interface PluginMenuItem {
-  id: string;
-  label: string;
-  action: () => void;
-  separator?: boolean;
-}
-
-export interface NetworkPlugin {
-  name: string;
-  version: string;
-  description: string;
-  author: string;
-
-  // Lifecycle hooks
-  onInit?(context: PluginContext): void;
-  onDestroy?(): void;
-
-  // Data processing hooks
-  onDataChange?(data: NetworkData): NetworkData;
-  onNodeClick?(event: NetworkEvent): void;
-  onNodeHover?(event: NetworkEvent): void;
-
-  // Rendering hooks
-  onBeforeRender?(context: RenderContext): void;
-  onAfterRender?(context: RenderContext): void;
-
-  // Custom functionality
-  getActions?(): PluginAction[];
-  getMenuItems?(): PluginMenuItem[];
 }

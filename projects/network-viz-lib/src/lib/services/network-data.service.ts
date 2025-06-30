@@ -1,5 +1,12 @@
 import { Injectable } from '@angular/core';
-import { NetworkData, NetworkNode, NetworkLink, ValidationResult, NodeShape } from '../interfaces/network-visualization.interfaces';
+import {
+  NetworkData,
+  NetworkNode,
+  NetworkLink,
+  ValidationResult,
+  NodeShape,
+  LineStyle
+} from '../interfaces/network-visualization.interfaces';
 
 @Injectable({
   providedIn: 'root'
@@ -9,79 +16,249 @@ export class NetworkDataService {
   /**
    * Validates network data structure and content
    */
-  validateNetworkData(data: any): ValidationResult {
-    const result: ValidationResult = {
-      isValid: true,
-      errors: [],
-      warnings: []
-    };
+  validateNetworkData(data: NetworkData): ValidationResult {
+    const errors: string[] = [];
+    const warnings: string[] = [];
 
+    // Basic structure validation
     if (!data) {
-      result.isValid = false;
-      result.errors.push('Data is null or undefined');
-      return result;
+      errors.push('Data is required');
+      return { isValid: false, errors, warnings };
     }
 
-    if (!data.nodes || !Array.isArray(data.nodes)) {
-      result.isValid = false;
-      result.errors.push('Data must contain a nodes array');
-    } else if (data.nodes.length === 0) {
-      result.warnings.push('Nodes array is empty');
+    if (!Array.isArray(data.nodes)) {
+      errors.push('Nodes must be an array');
     }
 
-    if (!data.links || !Array.isArray(data.links)) {
-      result.isValid = false;
-      result.errors.push('Data must contain a links array');
+    if (!Array.isArray(data.links)) {
+      errors.push('Links must be an array');
     }
 
-    // Validate individual nodes
-    if (data.nodes) {
-      data.nodes.forEach((node: any, index: number) => {
-        if (!this.isValidNode(node)) {
-          result.errors.push(`Invalid node at index ${index}: missing or invalid id`);
-          result.isValid = false;
-        }
-      });
+    if (errors.length > 0) {
+      return { isValid: false, errors, warnings };
     }
 
-    // Validate individual links
-    if (data.links && data.nodes) {
-      const nodeIds:any = new Set(data.nodes.map((n: any) => n.id));
-      data.links.forEach((link: any, index: number) => {
-        if (!this.isValidLink(link, nodeIds)) {
-          result.errors.push(`Invalid link at index ${index}: invalid source or target`);
-          result.isValid = false;
-        }
-      });
+    // Node validation
+    const nodeIds = new Set<string | number>();
+    data.nodes.forEach((node, index) => {
+      if (!this.isValidNode(node)) {
+        errors.push(`Invalid node at index ${index}`);
+        return;
+      }
+
+      if (nodeIds.has(node.id)) {
+        errors.push(`Duplicate node ID: ${node.id}`);
+      } else {
+        nodeIds.add(node.id);
+      }
+
+      // Validate node properties
+      if (node.size !== undefined && (typeof node.size !== 'number' || node.size <= 0)) {
+        warnings.push(`Invalid size for node ${node.id}: must be a positive number`);
+      }
+
+      if (node.shape && !this.isValidNodeShape(node.shape)) {
+        warnings.push(`Invalid shape for node ${node.id}: ${node.shape}`);
+      }
+
+      if (node.color && !this.isValidColor(node.color)) {
+        warnings.push(`Invalid color for node ${node.id}: ${node.color}`);
+      }
+    });
+
+    // Link validation
+    data.links.forEach((link, index) => {
+      if (!this.isValidLink(link)) {
+        errors.push(`Invalid link at index ${index}`);
+        return;
+      }
+
+      const sourceId = this.getLinkNodeId(link.source);
+      const targetId = this.getLinkNodeId(link.target);
+
+      if (!nodeIds.has(sourceId)) {
+        errors.push(`Link ${index} references non-existent source node: ${sourceId}`);
+      }
+
+      if (!nodeIds.has(targetId)) {
+        errors.push(`Link ${index} references non-existent target node: ${targetId}`);
+      }
+
+      if (sourceId === targetId) {
+        warnings.push(`Self-referencing link at index ${index}`);
+      }
+
+      // Validate link properties
+      if (link.value !== undefined && (typeof link.value !== 'number' || link.value < 0)) {
+        warnings.push(`Invalid value for link ${index}: must be a non-negative number`);
+      }
+
+      if (link.width !== undefined && (typeof link.width !== 'number' || link.width <= 0)) {
+        warnings.push(`Invalid width for link ${index}: must be a positive number`);
+      }
+
+      if (link.style && !this.isValidLineStyle(link.style)) {
+        warnings.push(`Invalid style for link ${index}: ${link.style}`);
+      }
+
+      if (link.color && !this.isValidColor(link.color)) {
+        warnings.push(`Invalid color for link ${index}: ${link.color}`);
+      }
+    });
+
+    // Performance warnings
+    if (data.nodes.length > 1000) {
+      warnings.push(`Large dataset: ${data.nodes.length} nodes may impact performance`);
     }
 
-    return result;
+    if (data.links.length > 5000) {
+      warnings.push(`Large dataset: ${data.links.length} links may impact performance`);
+    }
+
+    return {
+      isValid: errors.length === 0,
+      errors,
+      warnings
+    };
   }
 
   /**
-   * Sanitizes and cleans network data
+   * Sanitizes and normalizes network data
    */
   sanitizeData(data: NetworkData): NetworkData {
+    const sanitizedNodes = data.nodes.map(node => this.sanitizeNode(node));
+    const sanitizedLinks = data.links.map(link => this.sanitizeLink(link));
+
     return {
-      nodes: data.nodes.map(node => this.sanitizeNode(node)),
-      links: data.links.map(link => this.sanitizeLink(link))
+      nodes: sanitizedNodes,
+      links: sanitizedLinks
     };
   }
 
   /**
-   * Generates sample data for testing and demos
+   * Transforms data to D3-compatible format
    */
-  generateSampleData(type: 'simple' | 'complex' | 'large' = 'simple'): NetworkData {
-    switch (type) {
-      case 'simple':
-        return this.generateSimpleData();
-      case 'complex':
-        return this.generateComplexData();
-      case 'large':
-        return this.generateLargeData();
-      default:
-        return this.generateSimpleData();
+  transformForD3(data: NetworkData): NetworkData {
+    const nodeMap = new Map<string | number, NetworkNode>();
+
+    // Create node map for link references
+    data.nodes.forEach(node => {
+      nodeMap.set(node.id, { ...node });
+    });
+
+    // Transform links to reference node objects
+    const transformedLinks = data.links.map(link => ({
+      ...link,
+      source: nodeMap.get(this.getLinkNodeId(link.source)) || link.source,
+      target: nodeMap.get(this.getLinkNodeId(link.target)) || link.target
+    }));
+
+    return {
+      nodes: Array.from(nodeMap.values()),
+      links: transformedLinks
+    };
+  }
+
+  /**
+   * Filters data based on criteria
+   */
+  filterData(data: NetworkData, criteria: {
+    nodeFilter?: (node: NetworkNode) => boolean;
+    linkFilter?: (link: NetworkLink) => boolean;
+    includeConnectedNodes?: boolean;
+  }): NetworkData {
+    let filteredNodes = data.nodes;
+    let filteredLinks = data.links;
+
+    // Apply node filter
+    if (criteria.nodeFilter) {
+      filteredNodes = data.nodes.filter(criteria.nodeFilter);
     }
+
+    // Apply link filter
+    if (criteria.linkFilter) {
+      filteredLinks = data.links.filter(criteria.linkFilter);
+    }
+
+    // Include connected nodes if specified
+    if (criteria.includeConnectedNodes && criteria.linkFilter) {
+      const connectedNodeIds = new Set<string | number>();
+      filteredLinks.forEach(link => {
+        connectedNodeIds.add(this.getLinkNodeId(link.source));
+        connectedNodeIds.add(this.getLinkNodeId(link.target));
+      });
+
+      filteredNodes = data.nodes.filter(node =>
+        connectedNodeIds.has(node.id) ||
+        (criteria.nodeFilter && criteria.nodeFilter(node))
+      );
+    }
+
+    return {
+      nodes: filteredNodes,
+      links: filteredLinks
+    };
+  }
+
+  /**
+   * Calculates data statistics
+   */
+  calculateStatistics(data: NetworkData): {
+    nodeCount: number;
+    linkCount: number;
+    avgDegree: number;
+    maxDegree: number;
+    minDegree: number;
+    density: number;
+    clusters: number;
+  } {
+    const nodeCount = data.nodes.length;
+    const linkCount = data.links.length;
+
+    if (nodeCount === 0) {
+      return {
+        nodeCount: 0,
+        linkCount: 0,
+        avgDegree: 0,
+        maxDegree: 0,
+        minDegree: 0,
+        density: 0,
+        clusters: 0
+      };
+    }
+
+    // Calculate degree for each node
+    const degrees = new Map<string | number, number>();
+    data.nodes.forEach(node => degrees.set(node.id, 0));
+
+    data.links.forEach(link => {
+      const sourceId = this.getLinkNodeId(link.source);
+      const targetId = this.getLinkNodeId(link.target);
+      degrees.set(sourceId, (degrees.get(sourceId) || 0) + 1);
+      degrees.set(targetId, (degrees.get(targetId) || 0) + 1);
+    });
+
+    const degreeValues = Array.from(degrees.values());
+    const maxDegree = Math.max(...degreeValues);
+    const minDegree = Math.min(...degreeValues);
+    const avgDegree = degreeValues.reduce((sum, degree) => sum + degree, 0) / nodeCount;
+
+    // Calculate density
+    const maxPossibleLinks = (nodeCount * (nodeCount - 1)) / 2;
+    const density = maxPossibleLinks > 0 ? linkCount / maxPossibleLinks : 0;
+
+    // Estimate clusters (connected components)
+    const clusters = this.countConnectedComponents(data);
+
+    return {
+      nodeCount,
+      linkCount,
+      avgDegree,
+      maxDegree,
+      minDegree,
+      density,
+      clusters
+    };
   }
 
   private isValidNode(node: any): node is NetworkNode {
@@ -91,168 +268,123 @@ export class NetworkDataService {
            node.id !== undefined;
   }
 
-  private isValidLink(link: any, validNodeIds: Set<string | number>): boolean {
-    if (!link) return false;
+  private isValidLink(link: any): link is NetworkLink {
+    return link &&
+           link.source !== null &&
+           link.source !== undefined &&
+           link.target !== null &&
+           link.target !== undefined;
+  }
 
-    const sourceId = typeof link.source === 'object' ? link.source.id : link.source;
-    const targetId = typeof link.target === 'object' ? link.target.id : link.target;
+  private isValidNodeShape(shape: string): shape is NodeShape {
+    const validShapes: NodeShape[] = ['circle', 'square', 'triangle', 'diamond', 'star', 'hexagon'];
+    return validShapes.includes(shape as NodeShape);
+  }
 
-    return validNodeIds.has(sourceId) && validNodeIds.has(targetId);
+  private isValidLineStyle(style: string): style is LineStyle {
+    const validStyles: LineStyle[] = ['solid', 'dashed', 'dotted'];
+    return validStyles.includes(style as LineStyle);
+  }
+
+  private isValidColor(color: string): boolean {
+    // Basic color validation (hex, rgb, named colors)
+    const colorRegex = /^(#[0-9A-Fa-f]{3,8}|rgb\(|rgba\(|hsl\(|hsla\(|\w+)$/;
+    return colorRegex.test(color);
   }
 
   private sanitizeNode(node: NetworkNode): NetworkNode {
     const sanitized: NetworkNode = {
-      id: node.id
+      ...node
     };
 
-    // Only include valid properties
-    if (node.label && typeof node.label === 'string') {
-      sanitized.label = node.label.trim();
-    }
-    if (node.group !== undefined) sanitized.group = node.group;
-    if (node.category && typeof node.category === 'string') {
-      sanitized.category = node.category.trim();
-    }
-    if (typeof node.size === 'number' && node.size > 0) {
-      sanitized.size = Math.max(1, Math.min(100, node.size)); // Clamp size
-    }
-    if (node.color && this.isValidColor(node.color)) {
-      sanitized.color = node.color;
-    }
-    if (node.shape && this.isValidShape(node.shape)) {
-      sanitized.shape = node.shape;
+    // Ensure required properties
+    sanitized.id = node.id;
+
+    // Ensure numeric properties are valid
+    if (sanitized.size !== undefined) {
+      sanitized.size = Math.max(0, Number(sanitized.size) || 0);
     }
 
-    // Copy any custom properties
-    Object.keys(node).forEach(key => {
-      if (!sanitized.hasOwnProperty(key) && key !== 'id') {
-        (sanitized as any)[key] = node[key];
-      }
-    });
+    if (sanitized.x !== undefined) {
+      sanitized.x = Number(sanitized.x) || 0;
+    }
+
+    if (sanitized.y !== undefined) {
+      sanitized.y = Number(sanitized.y) || 0;
+    }
+
+    // Sanitize string properties
+    if (sanitized.label !== undefined) {
+      sanitized.label = String(sanitized.label);
+    }
 
     return sanitized;
   }
 
   private sanitizeLink(link: NetworkLink): NetworkLink {
     const sanitized: NetworkLink = {
-      source: link.source,
-      target: link.target
+      ...link
     };
 
-    if (link.id) sanitized.id = link.id;
-    if (link.label && typeof link.label === 'string') {
-      sanitized.label = link.label.trim();
-    }
-    if (link.color && this.isValidColor(link.color)) {
-      sanitized.color = link.color;
-    }
-    if (typeof link.width === 'number' && link.width > 0) {
-      sanitized.width = Math.max(1, Math.min(20, link.width));
+    // Ensure required properties
+    sanitized.source = link.source;
+    sanitized.target = link.target;
+
+    // Ensure numeric properties are valid
+    if (sanitized.value !== undefined) {
+      sanitized.value = Math.max(0, Number(sanitized.value) || 0);
     }
 
-    // Copy any custom properties
-    Object.keys(link).forEach(key => {
-      if (!sanitized.hasOwnProperty(key) && !['source', 'target'].includes(key)) {
-        (sanitized as any)[key] = link[key];
-      }
-    });
+    if (sanitized.width !== undefined) {
+      sanitized.width = Math.max(0, Number(sanitized.width) || 1);
+    }
 
     return sanitized;
   }
 
-  private isValidColor(color: string): boolean {
-    // Simple color validation
-    return /^#([0-9A-F]{3}){1,2}$/i.test(color) ||
-           /^rgb\(/i.test(color) ||
-           /^rgba\(/i.test(color) ||
-           ['red', 'blue', 'green', 'yellow', 'black', 'white', 'gray', 'orange', 'purple', 'pink'].includes(color.toLowerCase());
+  private getLinkNodeId(node: string | number | NetworkNode): string | number {
+    if (typeof node === 'string' || typeof node === 'number') {
+      return node;
+    }
+    return node.id;
   }
 
-  private isValidShape(shape: string): shape is NodeShape {
-    return ['circle', 'square', 'triangle', 'diamond', 'star', 'hexagon'].includes(shape);
-  }
+  private countConnectedComponents(data: NetworkData): number {
+    const visited = new Set<string | number>();
+    const adjacencyList = new Map<string | number, Set<string | number>>();
 
-  private generateSimpleData(): NetworkData {
-    return {
-      nodes: [
-        { id: 1, label: 'Central Hub', group: 'Core', size: 20, color: '#ff6b6b' },
-        { id: 2, label: 'Database', group: 'Storage', size: 15, color: '#4ecdc4' },
-        { id: 3, label: 'Web Server', group: 'Frontend', size: 12, color: '#45b7d1' },
-        { id: 4, label: 'API Gateway', group: 'Backend', size: 18, color: '#f9ca24' },
-        { id: 5, label: 'Cache', group: 'Storage', size: 10, color: '#f0932b' }
-      ],
-      links: [
-        { source: 1, target: 2, label: 'Data Flow' },
-        { source: 1, target: 3, label: 'Requests' },
-        { source: 3, target: 4, label: 'API Calls' },
-        { source: 4, target: 2, label: 'Queries' },
-        { source: 4, target: 5, label: 'Caching' }
-      ]
+    // Build adjacency list
+    data.nodes.forEach(node => {
+      adjacencyList.set(node.id, new Set());
+    });
+
+    data.links.forEach(link => {
+      const sourceId = this.getLinkNodeId(link.source);
+      const targetId = this.getLinkNodeId(link.target);
+      adjacencyList.get(sourceId)?.add(targetId);
+      adjacencyList.get(targetId)?.add(sourceId);
+    });
+
+    let components = 0;
+
+    // DFS to find connected components
+    const dfs = (nodeId: string | number) => {
+      visited.add(nodeId);
+      const neighbors = adjacencyList.get(nodeId) || new Set();
+      neighbors.forEach(neighborId => {
+        if (!visited.has(neighborId)) {
+          dfs(neighborId);
+        }
+      });
     };
-  }
 
-  private generateComplexData(): NetworkData {
-    const nodes: NetworkNode[] = [];
-    const links: NetworkLink[] = [];
-
-    // Generate 20 nodes with various properties
-    for (let i = 1; i <= 20; i++) {
-      nodes.push({
-        id: i,
-        label: `Node ${i}`,
-        group: Math.floor((i - 1) / 5),
-        category: i % 3 === 0 ? 'critical' : 'standard',
-        size: Math.random() * 15 + 8,
-        color: ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6'][i % 5],
-        customProperty: `Custom value ${i}`
-      });
-    }
-
-    // Generate 30 links
-    for (let i = 0; i < 30; i++) {
-      const source = Math.floor(Math.random() * 20) + 1;
-      let target = Math.floor(Math.random() * 20) + 1;
-      while (target === source) {
-        target = Math.floor(Math.random() * 20) + 1;
+    data.nodes.forEach(node => {
+      if (!visited.has(node.id)) {
+        components++;
+        dfs(node.id);
       }
+    });
 
-      links.push({
-        source,
-        target,
-        label: `Link ${i + 1}`,
-        strength: Math.random(),
-        width: Math.random() * 4 + 1
-      });
-    }
-
-    return { nodes, links };
-  }
-
-  private generateLargeData(): NetworkData {
-    const nodes: NetworkNode[] = [];
-    const links: NetworkLink[] = [];
-
-    // Generate 100 nodes
-    for (let i = 1; i <= 100; i++) {
-      nodes.push({
-        id: i,
-        label: `Node ${i}`,
-        group: Math.floor((i - 1) / 20),
-        size: Math.random() * 10 + 5
-      });
-    }
-
-    // Generate 150 links
-    for (let i = 0; i < 150; i++) {
-      const source = Math.floor(Math.random() * 100) + 1;
-      let target = Math.floor(Math.random() * 100) + 1;
-      while (target === source) {
-        target = Math.floor(Math.random() * 100) + 1;
-      }
-
-      links.push({ source, target });
-    }
-
-    return { nodes, links };
+    return components;
   }
 }

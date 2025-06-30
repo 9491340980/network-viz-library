@@ -1,6 +1,15 @@
 {
-  "name": "network-viz-library",
-  "version": "0.0.0",
+  "name": "@your-org/network-viz-library",
+  "version": "1.0.0",
+  "description": "Advanced Network Visualization Component Library for Angular",
+  "keywords": ["angular", "network", "visualization", "d3", "graph", "components"],
+  "homepage": "https://your-org.github.io/network-viz-library",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/network-viz-library.git"
+  },
+  "license": "MIT",
+  "author": "Your Organization",
   "scripts": {
     "ng": "ng",
     "start": "ng serve demo-app",
@@ -22,9 +31,16 @@
     "docs:generate": "compodoc -p projects/network-viz-lib/tsconfig.lib.json -d docs/api --theme material",
     "docs:serve": "compodoc -p projects/network-viz-lib/tsconfig.lib.json -s -d docs/api",
     "release": "npm run build && npm publish dist/network-viz-lib",
-    "pack": "npm run build && cd dist/network-viz-lib && npm pack"
+    "pack": "npm run build && cd dist/network-viz-lib && npm pack",
+    "benchmark": "ng run demo-app:serve --configuration=benchmark"
   },
-  "private": true,
+  "peerDependencies": {
+    "@angular/common": "^19.2.15",
+    "@angular/core": "^19.2.15",
+    "@angular/platform-browser": "^19.2.15",
+    "d3": "^7.8.5",
+    "rxjs": "^7.8.0"
+  },
   "dependencies": {
     "@angular/common": "^19.2.0",
     "@angular/compiler": "^19.2.0",
@@ -53,17 +69,21 @@
     "@storybook/angular": "^9.0.13",
     "@types/d3": "^7.4.0",
     "@types/jasmine": "~5.1.0",
+    "@types/node": "^18.18.0",
     "cypress": "^14.5.0",
-    "gh-pages": "^6.3.0",
+    "d3": "^7.8.5",
+    "gh-pages": "^6.0.0",
     "jasmine": "^5.8.0",
-    "jasmine-core": "~5.6.0",
-    "karma": "^6.4.4",
+    "jasmine-core": "~5.1.0",
+    "karma": "~6.4.0",
     "karma-chrome-launcher": "~3.2.0",
     "karma-coverage": "~2.2.0",
     "karma-jasmine": "~5.1.0",
     "karma-jasmine-html-reporter": "~2.1.0",
     "ng-packagr": "^20.0.1",
-    "storybook": "^9.0.13",
-    "typescript": "^5.8.3"
+    "rxjs": "~7.8.0",
+    "storybook": "^8.0.0",
+    "typescript": "~5.6.0",
+    "zone.js": "~0.15.0"
   }
 }

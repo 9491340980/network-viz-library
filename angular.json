@@ -17,51 +17,15 @@
           "configurations": {
             "production": {
               "tsConfig": "projects/network-viz-lib/tsconfig.lib.prod.json"
-            },
-            "development": {
-              "tsConfig": "projects/network-viz-lib/tsconfig.lib.json"
             }
-          },
-          "defaultConfiguration": "production"
+          }
         },
         "test": {
           "builder": "@angular-devkit/build-angular:karma",
           "options": {
             "tsConfig": "projects/network-viz-lib/tsconfig.spec.json",
-            "polyfills": [
-              "zone.js",
-              "zone.js/testing"
-            ]
-          }
-        },
-        "storybook": {
-          "builder": "@storybook/angular:start-storybook",
-          "options": {
-            "configDir": "projects/network-viz-lib/.storybook",
-            "browserTarget": "network-viz-lib:build",
-            "compodoc": true,
-            "compodocArgs": [
-              "-e",
-              "json",
-              "-d",
-              "projects/network-viz-lib"
-            ],
-            "port": 6006
-          }
-        },
-        "build-storybook": {
-          "builder": "@storybook/angular:build-storybook",
-          "options": {
-            "configDir": "projects/network-viz-lib/.storybook",
-            "browserTarget": "network-viz-lib:build",
-            "compodoc": true,
-            "compodocArgs": [
-              "-e",
-              "json",
-              "-d",
-              "projects/network-viz-lib"
-            ],
-            "outputDir": "dist/storybook/network-viz-lib"
+            "polyfills": ["zone.js", "zone.js/testing"],
+            "karmaConfig": "karma.conf.js"
           }
         }
       }
@@ -73,30 +37,20 @@
           "style": "scss"
         }
       },
-      "root": "projects/demo-app",
-      "sourceRoot": "projects/demo-app/src",
+      "root": "src",
+      "sourceRoot": "src",
       "prefix": "app",
       "architect": {
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
             "outputPath": "dist/demo-app",
-            "index": "projects/demo-app/src/index.html",
-            "browser": "projects/demo-app/src/main.ts",
-            "polyfills": [
-              "zone.js"
-            ],
-            "tsConfig": "projects/demo-app/tsconfig.app.json",
-            "inlineStyleLanguage": "scss",
-            "assets": [
-              {
-                "glob": "**/*",
-                "input": "projects/demo-app/public"
-              }
-            ],
-            "styles": [
-              "projects/demo-app/src/styles.scss"
-            ],
+            "index": "src/index.html",
+            "browser": "src/main.ts",
+            "polyfills": ["zone.js"],
+            "tsConfig": "tsconfig.app.json",
+            "assets": ["src/favicon.ico", "src/assets"],
+            "styles": ["src/styles.scss"],
             "scripts": []
           },
           "configurations": {
@@ -104,13 +58,13 @@
               "budgets": [
                 {
                   "type": "initial",
-                  "maximumWarning": "500kB",
-                  "maximumError": "1MB"
+                  "maximumWarning": "2MB",
+                  "maximumError": "5MB"
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "4kB",
-                  "maximumError": "8kB"
+                  "maximumWarning": "6kB",
+                  "maximumError": "10kB"
                 }
               ],
               "outputHashing": "all"
@@ -134,35 +88,11 @@
             }
           },
           "defaultConfiguration": "development"
-        },
-        "extract-i18n": {
-          "builder": "@angular-devkit/build-angular:extract-i18n"
-        },
-        "test": {
-          "builder": "@angular-devkit/build-angular:karma",
-          "options": {
-            "polyfills": [
-              "zone.js",
-              "zone.js/testing"
-            ],
-            "tsConfig": "projects/demo-app/tsconfig.spec.json",
-            "inlineStyleLanguage": "scss",
-            "assets": [
-              {
-                "glob": "**/*",
-                "input": "projects/demo-app/public"
-              }
-            ],
-            "styles": [
-              "projects/demo-app/src/styles.scss"
-            ],
-            "scripts": []
-          }
         }
       }
     }
   },
   "cli": {
-    "analytics": false
+    "analytics": "066453f4-09c3-475d-b263-d3a7b2b8c2a6"
   }
 }

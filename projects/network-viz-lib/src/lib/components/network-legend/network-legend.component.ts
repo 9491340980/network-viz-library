@@ -1,38 +1,66 @@
-import { Component, Input, ChangeDetectionStrategy, computed, SecurityContext } from '@angular/core';
+import { Component, Input, ChangeDetectionStrategy, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
-import { LegendItem, LegendConfig } from '../../interfaces/network-visualization.interfaces';
+import { LegendConfig, LegendItem, NodeShape } from '../../interfaces/network-visualization.interfaces';
 
 @Component({
-  selector: 'nvl-network-legend',
+  selector: 'app-network-legend',
   standalone: true,
   imports: [CommonModule],
   template: `
     <div class="network-legend"
-         *ngIf="visible && items.length > 0"
-         [class]="'legend-' + legendConfig.position"
-         [style.left.px]="legendPosition().x"
-         [style.top.px]="legendPosition().y"
-         [style.max-width.px]="legendConfig.maxWidth"
-         [style.max-height.px]="legendConfig.maxHeight"
+         *ngIf="visible && visibleItems().length > 0"
+         [class]="'legend-' + (legendConfig.position || 'top-right')"
+         [style.max-width.px]="200"
+         [style.max-height.px]="300"
          [style.background-color]="legendConfig.backgroundColor || 'rgba(255, 255, 255, 0.95)'"
-         [style.border-color]="legendConfig.borderColor || '#ddd'"
+         [style.color]="legendConfig.textColor || '#333'"
+         [style.border]="'1px solid ' + (legendConfig.borderColor || '#ddd')"
          [style.border-radius.px]="legendConfig.borderRadius || 4"
          [style.padding.px]="legendConfig.padding || 10"
          [style.font-size.px]="legendConfig.fontSize || 12"
+         [style.box-shadow]="'0 2px 4px rgba(0,0,0,0.1)'"
+         [style.z-index]="100"
          role="region"
          aria-label="Legend">
 
-      <h4 *ngIf="legendConfig.title" [style.margin]="'0 0 8px 0'">
-        {{ legendConfig.title }}
-      </h4>
-
       <div class="legend-items"
-           [class.horizontal]="legendConfig.orientation === 'horizontal'"
-           [style.gap.px]="legendConfig.itemSpacing || 4">
+           [style.gap.px]="4">
         <div class="legend-item"
              *ngFor="let item of visibleItems(); trackBy: trackItem"
-             [innerHTML]="getSafeItemHtml(item)">
+             [style.margin-bottom.px]="2">
+
+          <!-- Symbol (Shape or Color) -->
+          <div class="legend-symbol"
+               [style.width.px]="getSymbolSize(item)"
+               [style.height.px]="getSymbolSize(item)"
+               [style.min-width.px]="getSymbolSize(item)"
+               [style.background-color]="item.color || '#69b3a2'"
+               [style.border-radius]="getShapeStyle(item.shape)"
+               [style.border]="'1px solid transparent'"
+               [attr.aria-label]="'Symbol for ' + item.label">
+
+            <!-- Custom shape rendering for non-circle shapes -->
+            <svg *ngIf="item.shape && item.shape !== 'circle'"
+                 [attr.width]="getSymbolSize(item)"
+                 [attr.height]="getSymbolSize(item)"
+                 [style.display]="'block'">
+              <path [attr.d]="getShapePath(item.shape, getSymbolSize(item) / 2)"
+                    [attr.fill]="item.color || '#69b3a2'"
+                    [attr.stroke]="'transparent'"
+                    [attr.stroke-width]="1"
+                    [attr.transform]="'translate(' + (getSymbolSize(item) / 2) + ',' + (getSymbolSize(item) / 2) + ')'">
+              </path>
+            </svg>
+          </div>
+
+          <!-- Label -->
+          <span class="legend-label"
+                [style.font-size.px]="legendConfig.fontSize || 12"
+                [style.line-height]="'1.2'"
+                [title]="item.label">
+            {{ item.label }}
+          </span>
         </div>
       </div>
     </div>
@@ -40,9 +68,8 @@ import { LegendItem, LegendConfig } from '../../interfaces/network-visualization
   styles: [`
     .network-legend {
       position: absolute;
-      border: 1px solid #ddd;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-      z-index: 100;
+      overflow: auto;
+      user-select: none;
     }
 
     .legend-top-left {
@@ -65,23 +92,9 @@ import { LegendItem, LegendConfig } from '../../interfaces/network-visualization
       right: 10px;
     }
 
-    .legend-custom {
-      /* Position will be set via style binding */
-    }
-
-    .network-legend h4 {
-      margin: 0 0 8px 0;
-      font-weight: 600;
-    }
-
     .legend-items {
       display: flex;
       flex-direction: column;
-    }
-
-    .legend-items.horizontal {
-      flex-direction: row;
-      flex-wrap: wrap;
     }
 
     .legend-item {
@@ -93,6 +106,24 @@ import { LegendItem, LegendConfig } from '../../interfaces/network-visualization
 
     .legend-symbol {
       flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .legend-label {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .network-legend {
+        max-width: calc(100vw - 40px) !important;
+        font-size: 11px !important;
+      }
     }
   `],
   changeDetection: ChangeDetectionStrategy.OnPush
@@ -104,82 +135,112 @@ export class NetworkLegendComponent {
 
   get legendConfig(): LegendConfig {
     return {
-      position: 'bottom-left',
-      orientation: 'vertical',
-      maxWidth: 200,
+      enabled: true,
+      position: 'top-right',
       backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      textColor: '#333',
       borderColor: '#ddd',
       borderRadius: 4,
       padding: 10,
       fontSize: 12,
-      itemSpacing: 4,
-      symbolSize: 12,
+      showShapes: true,
+      showColors: true,
+      showSizes: false,
       ...this.config
     };
   }
 
-  visibleItems = computed(() => {
-    return this.items.filter(item => item.visible !== false);
-  });
-
-  legendPosition = computed(() => {
-    const config = this.legendConfig;
-
-    if (config.position === 'custom' && config.customPosition) {
-      return config.customPosition;
-    }
-
-    return { x: 0, y: 0 };
-  });
-
   constructor(private sanitizer: DomSanitizer) {}
 
-  getSafeItemHtml(item: LegendItem): SafeHtml | null {
-    try {
-      const config = this.legendConfig;
+  visibleItems = computed(() => {
+    let filteredItems: LegendItem[] = [...this.items];
 
-      if (config.itemTemplate) {
-        const html = config.itemTemplate(item);
-        return this.sanitizer.sanitize(SecurityContext.HTML, html);
-      }
-
-      const symbolSize = item.size || config.symbolSize || 12;
-      const shape = item.shape || 'circle';
-
-      let symbolHtml = this.generateSymbolHtml(shape, symbolSize, item.color);
-      const html = `${symbolHtml}<span>${this.escapeHtml(item.label)}</span>`;
-
-      return this.sanitizer.sanitize(SecurityContext.HTML, html);
-    } catch (error) {
-      console.warn('Error generating legend item HTML:', error);
-      return null;
+    // Filter by configuration
+    if (!this.legendConfig.showColors) {
+      filteredItems = filteredItems.filter(item => !item.color || item.shape || item.size);
     }
+
+    if (!this.legendConfig.showShapes) {
+      filteredItems = filteredItems.filter(item => !item.shape || item.color || item.size);
+    }
+
+    if (!this.legendConfig.showSizes) {
+      filteredItems = filteredItems.filter(item => !item.size || item.color || item.shape);
+    }
+
+    return filteredItems;
+  });
+
+  trackItem(index: number, item: LegendItem): any {
+    return item.label; // Using label since id might not exist
   }
 
-  trackItem(index: number, item: LegendItem): string {
-    return `${item.label}_${item.color}_${item.shape}`;
+  getSymbolSize(item: LegendItem): number {
+    if (item.size !== undefined) {
+      return Math.max(8, Math.min(24, item.size));
+    }
+    return 12; // Default size since symbolSize might not exist in config
   }
 
-  private generateSymbolHtml(shape: string, size: number, color: string): string {
-    const commonStyle = `width: ${size}px; height: ${size}px; background-color: ${color}; display: inline-block; margin-right: 6px;`;
+  getShapeStyle(shape?: NodeShape): string {
+    if (!shape || shape === 'circle') {
+      return '50%'; // Circular
+    }
+    if (shape === 'square') {
+      return '0'; // Square corners
+    }
+    return '2px'; // Slightly rounded for other shapes
+  }
 
+  getShapePath(shape: NodeShape, radius: number): string {
     switch (shape) {
-      case 'circle':
-        return `<div class="legend-symbol" style="${commonStyle} border-radius: 50%;"></div>`;
       case 'square':
-        return `<div class="legend-symbol" style="${commonStyle}"></div>`;
+        return `M ${-radius},${-radius} L ${radius},${-radius} L ${radius},${radius} L ${-radius},${radius} Z`;
+
       case 'triangle':
-        return `<div class="legend-symbol" style="width: 0; height: 0; border-left: ${size/2}px solid transparent; border-right: ${size/2}px solid transparent; border-bottom: ${size}px solid ${color}; display: inline-block; margin-right: 6px;"></div>`;
+        const height = radius * Math.sqrt(3);
+        return `M 0,${-height * 0.6} L ${radius},${height * 0.4} L ${-radius},${height * 0.4} Z`;
+
       case 'diamond':
-        return `<div class="legend-symbol" style="${commonStyle} transform: rotate(45deg);"></div>`;
-      default:
-        return `<div class="legend-symbol" style="${commonStyle} border-radius: 2px;"></div>`;
+        return `M 0,${-radius} L ${radius},0 L 0,${radius} L ${-radius},0 Z`;
+
+      case 'star':
+        return this.generateStarPath(radius);
+
+      case 'hexagon':
+        return this.generateHexagonPath(radius);
+
+      default: // circle
+        return `M 0,${-radius} A ${radius},${radius} 0 1,1 0,${radius} A ${radius},${radius} 0 1,1 0,${-radius}`;
     }
   }
 
-  private escapeHtml(text: string): string {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+  private generateStarPath(radius: number): string {
+    const points: string[] = [];
+    const outerRadius = radius;
+    const innerRadius = radius * 0.4;
+
+    for (let i = 0; i < 10; i++) {
+      const angle = (i * Math.PI) / 5 - Math.PI / 2;
+      const r = i % 2 === 0 ? outerRadius : innerRadius;
+      const x = Math.cos(angle) * r;
+      const y = Math.sin(angle) * r;
+      points.push(`${i === 0 ? 'M' : 'L'} ${x},${y}`);
+    }
+
+    return points.join(' ') + ' Z';
+  }
+
+  private generateHexagonPath(radius: number): string {
+    const points: string[] = [];
+
+    for (let i = 0; i < 6; i++) {
+      const angle = (i * Math.PI) / 3;
+      const x = Math.cos(angle) * radius;
+      const y = Math.sin(angle) * radius;
+      points.push(`${i === 0 ? 'M' : 'L'} ${x},${y}`);
+    }
+
+    return points.join(' ') + ' Z';
   }
 }

@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable, distinctUntilChanged, map } from 'rxjs';
-import { NetworkData, NetworkVisualizationConfig, NetworkNode } from '../interfaces/network-visualization.interfaces';
+import { NetworkData, NetworkNode, NetworkVisualizationConfig } from '../interfaces/network-visualization.interfaces';
 
 export interface NetworkVisualizationState {
   data: NetworkData;
@@ -140,43 +140,27 @@ export class NetworkStateService {
     this.updateState({ lastError: error });
   }
 
-  updatePerformanceMetrics(metrics: Partial<typeof this.initialState.performanceMetrics>): void {
+  updatePerformanceMetrics(metrics: Partial<NetworkVisualizationState['performanceMetrics']>): void {
     this.updateState({
       performanceMetrics: { ...this.currentState.performanceMetrics, ...metrics }
     });
   }
 
-  // Batch updates for performance
   batchUpdate(updates: Partial<NetworkVisualizationState>): void {
     this.updateState(updates);
   }
 
-  // Reset state
   reset(): void {
     this.state$.next({ ...this.initialState });
   }
 
   private updateState(updates: Partial<NetworkVisualizationState>): void {
-    const currentState = this.state$.value;
+    const currentState = this.currentState;
     const newState = { ...currentState, ...updates };
     this.state$.next(newState);
   }
 
-  private deepEqual(obj1: any, obj2: any): boolean {
-    if (obj1 === obj2) return true;
-    if (obj1 == null || obj2 == null) return false;
-    if (typeof obj1 !== 'object' || typeof obj2 !== 'object') return false;
-
-    const keys1 = Object.keys(obj1);
-    const keys2 = Object.keys(obj2);
-
-    if (keys1.length !== keys2.length) return false;
-
-    for (const key of keys1) {
-      if (!keys2.includes(key)) return false;
-      if (!this.deepEqual(obj1[key], obj2[key])) return false;
-    }
-
-    return true;
+  private deepEqual(a: any, b: any): boolean {
+    return JSON.stringify(a) === JSON.stringify(b);
   }
 }
