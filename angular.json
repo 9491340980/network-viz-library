@@ -37,20 +37,23 @@
           "style": "scss"
         }
       },
-      "root": "src",
-      "sourceRoot": "src",
+      "root": "projects/demo-app",
+      "sourceRoot": "projects/demo-app/src",
       "prefix": "app",
       "architect": {
         "build": {
           "builder": "@angular-devkit/build-angular:application",
           "options": {
             "outputPath": "dist/demo-app",
-            "index": "src/index.html",
-            "browser": "src/main.ts",
+            "index": "projects/demo-app/src/index.html",
+            "browser": "projects/demo-app/src/main.ts",
             "polyfills": ["zone.js"],
-            "tsConfig": "tsconfig.app.json",
-            "assets": ["src/favicon.ico", "src/assets"],
-            "styles": ["src/styles.scss"],
+            "tsConfig": "projects/demo-app/tsconfig.app.json",
+            "assets": [
+              "projects/demo-app/src/favicon.ico",
+              "projects/demo-app/src/assets"
+            ],
+            "styles": ["projects/demo-app/src/styles.scss"],
             "scripts": []
           },
           "configurations": {
@@ -92,6 +95,7 @@
       }
     }
   },
+  "defaultProject": "demo-app",
   "cli": {
     "analytics": "066453f4-09c3-475d-b263-d3a7b2b8c2a6"
   }

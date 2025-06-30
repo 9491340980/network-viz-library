@@ -1,124 +1,69 @@
-<div class="demo-app">
-      <header class="app-header">
-        <h1>🌐 Network Visualization Demo</h1>
-        <p>Interactive demonstration of the Network Visualization Component Library</p>
-      </header>
+<div class="app-container">
+      <h1>🚀 Network Visualization Demo</h1>
 
-      <div class="demo-controls">
-        <div class="control-section">
-          <h3>Configuration</h3>
-
-          <div class="control-group">
-            <label>
-              Dataset:
-              <select [(ngModel)]="selectedDataset" (change)="loadDataset()">
-                <option value="simple">Simple (5 nodes)</option>
-                <option value="complex">Complex (20 nodes)</option>
-                <option value="large">Large (100 nodes)</option>
-              </select>
-            </label>
-          </div>
-
-          <div class="control-group">
-            <label>
-              Theme:
-              <select [(ngModel)]="selectedTheme" (change)="applyTheme()">
-                <option value="light">Light</option>
-                <option value="dark">Dark</option>
-                <option value="corporate">Corporate</option>
-                <option value="cyberpunk">Cyberpunk</option>
-              </select>
-            </label>
-          </div>
-
-          <div class="control-group">
-            <label>
-              Preset:
-              <select [(ngModel)]="selectedPreset" (change)="applyPreset()">
-                <option value="presentation">Presentation</option>
-                <option value="analytical">Analytical</option>
-                <option value="performance">Performance</option>
-                <option value="mobile">Mobile</option>
-              </select>
-            </label>
-          </div>
-
-          <div class="control-group">
-            <label>
-              <input type="checkbox" [(ngModel)]="showControls">
-              Show Controls
-            </label>
-          </div>
-
-          <div class="control-group">
-            <label>
-              <input type="checkbox" [(ngModel)]="showLegend">
-              Show Legend
-            </label>
-          </div>
-
-          <div class="control-group">
-            <label>
-              <input type="checkbox" [(ngModel)]="showTooltip">
-              Show Tooltip
-            </label>
-          </div>
-        </div>
-
-        <div class="control-section">
-          <h3>Statistics</h3>
-          <div class="stats">
-            <div class="stat">
-              <span class="stat-label">Nodes:</span>
-              <span class="stat-value">{{ networkData.nodes.length }}</span>
-            </div>
-            <div class="stat">
-              <span class="stat-label">Links:</span>
-              <span class="stat-value">{{ networkData.links.length }}</span>
-            </div>
-            <div class="stat">
-              <span class="stat-label">Events:</span>
-              <span class="stat-value">{{ eventCount }}</span>
-            </div>
-          </div>
-        </div>
-
-        <div class="control-section" *ngIf="errors.length > 0">
-          <h3>Errors</h3>
-          <div class="error-list">
-            <div *ngFor="let error of errors" class="error-item">
-              <strong>{{ error.type }}:</strong> {{ error.message }}
-            </div>
-          </div>
-          <button (click)="clearErrors()">Clear Errors</button>
-        </div>
+      <div class="status-banner" [ngClass]="statusClass">
+        <strong>Status:</strong> {{ statusMessage }}
       </div>
 
-      <div class="visualization-container">
-        <nvl-network-visualization-v2
+      <div class="controls">
+        <button (click)="loadSampleData()" [disabled]="isLoading">
+          {{ isLoading ? 'Loading...' : 'Load Sample Data' }}
+        </button>
+        <button (click)="addRandomNode()" [disabled]="isLoading">Add Random Node</button>
+        <button (click)="clearData()" [disabled]="isLoading">Clear Data</button>
+        <button (click)="toggleTheme()">Toggle Theme</button>
+      </div>
+<button (click)="debugNetworkData()" class="debug-button">
+  🐛 Debug Data
+</button>
+      <div class="visualization-wrapper">
+        <app-network-visualization-v2
           [data]="networkData"
-          [config]="visualizationConfig"
-          [width]="1000"
-          [height]="700"
-          [showControls]="showControls"
-          [showLegend]="showLegend"
-          [showTooltip]="showTooltip"
+          [config]="networkConfig"
+          [width]="800"
+          [height]="600"
+          [showTooltip]="true"
+          [showLegend]="true"
+          [showControls]="true"
           (nodeClick)="onNodeClick($event)"
           (nodeHover)="onNodeHover($event)"
           (linkClick)="onLinkClick($event)"
-          (error)="onError($event)"
-          (zoomChanged)="onZoomChanged($event)">
-        </nvl-network-visualization-v2>
+          (backgroundClick)="onBackgroundClick($event)">
+        </app-network-visualization-v2>
       </div>
 
-      <div class="event-log" *ngIf="recentEvents.length > 0">
-        <h3>Recent Events</h3>
-        <div class="event-list">
-          <div *ngFor="let event of recentEvents.slice(-5)" class="event-item">
-            <span class="event-type">{{ event.type }}</span>
-            <span class="event-data">{{ getEventDescription(event) }}</span>
-            <span class="event-time">{{ event.timestamp | date:'HH:mm:ss' }}</span>
+      <div class="info-panels">
+        <div class="panel">
+          <h3>📊 Network Stats</h3>
+          <ul>
+            <li>Nodes: {{ networkData.nodes.length }}</li>
+            <li>Links: {{ networkData.links.length }}</li>
+            <li>Groups: {{ getUniqueGroups().length }}</li>
+          </ul>
+        </div>
+
+        <div class="panel">
+          <h3>🎯 Event Log</h3>
+          <div class="event-log">
+            <div *ngFor="let event of eventLog.slice(-5); let i = index"
+                 [class]="'event-' + event.type">
+              {{ event.timestamp.toLocaleTimeString() }}: {{ event.message }}
+            </div>
+            <div *ngIf="eventLog.length === 0" class="no-events">
+              No events yet - try hovering or clicking nodes
+            </div>
           </div>
         </div>
+      </div>
+
+      <div class="instructions">
+        <h3>🎮 How to Use</h3>
+        <ul>
+          <li><strong>Hover</strong> over nodes to see tooltips</li>
+          <li><strong>Click</strong> nodes and links to trigger events</li>
+          <li><strong>Drag</strong> nodes to reposition them</li>
+          <li><strong>Scroll</strong> to zoom in/out</li>
+          <li><strong>Use controls</strong> in top-right for navigation</li>
+        </ul>
       </div>
     </div>

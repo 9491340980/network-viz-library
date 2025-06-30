@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterOutlet } from '@angular/router';
-import { NetworkConfigBuilderService, NetworkData, NetworkDataService, NetworkError, NetworkEvent, NetworkVisualizationConfig, NetworkVisualizationV2Component } from 'network-viz-lib';
+import { NetworkData, NetworkEvent, NetworkVisualizationConfig, NetworkVisualizationV2Component } from 'dist/network-viz-lib';
 
 @Component({
   selector: 'app-root',
@@ -11,371 +11,369 @@ import { NetworkConfigBuilderService, NetworkData, NetworkDataService, NetworkEr
   styleUrl: './app.component.scss'
 })
 export class AppComponent {
- title = 'network-visualization-demo';
+  title = 'Network Visualization Demo';
 
-  // Configuration properties
-  selectedDataset: string = 'simple';
-  selectedTheme: string = 'light';
-  selectedPreset: string = 'presentation';
-  showControls: boolean = true;
-  showLegend: boolean = true;
-  showTooltip: boolean = true;
-
-  // Data and configuration
-  networkData: NetworkData = { nodes: [], links: [] };
-  visualizationConfig: NetworkVisualizationConfig = {};
+  // State
+  isLoading = false;
+  isDarkTheme = false;
+  statusMessage = 'Ready to visualize networks!';
+  statusClass = 'success';
 
   // Event tracking
-  recentEvents: any[] = [];
-  eventCount: number = 0;
-  errors: NetworkError[] = [];
+  eventLog: { timestamp: Date; message: string; type: string }[] = [];
+
+  // Network data
+  networkData: NetworkData = { nodes: [], links: [] };
+
+  // Configuration
+  networkConfig: NetworkVisualizationConfig = {
+    nodeStyles: {
+      defaultSize: 15,
+      defaultShape: 'circle',
+      defaultColor: '#69b3a2',
+      defaultBorderColor: '#ffffff',
+      defaultBorderWidth: 2,
+      groupColors: {
+        'A': '#ff6b6b',
+        'B': '#4ecdc4',
+        'C': '#45b7d1',
+        'D': '#f9ca24',
+        'E': '#6c5ce7',
+        'F': '#fd79a8',
+        'G': '#fdcb6e'
+      }
+    },
+    linkStyles: {
+      defaultColor: '#999999',
+      defaultWidth: 2,
+      defaultStyle: 'solid'
+    },
+    forceConfig: {
+      enabled: true,
+      chargeStrength: -300,
+      linkDistance: 80,
+      centerStrength: 0.3,
+      collideRadius: 25,
+      velocityDecay: 0.4,
+      alphaDecay: 0.0228
+    },
+    interactionConfig: {
+      enableHover: true,
+      enableClick: true,
+      enableDrag: true,
+      enableZoom: true,
+      enablePan: true
+    },
+    tooltipConfig: {
+      enabled: true,
+      showNodeId: true,
+      showNodeLabel: true,
+      showNodeGroup: true,
+      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+      textColor: 'white',
+      fontSize: 12,
+      maxWidth: 200,
+      borderRadius: 4,
+      padding: '8px 12px'
+    },
+    legendConfig: {
+      enabled: true,
+      position: 'top-right',
+      backgroundColor: 'rgba(255, 255, 255, 0.95)',
+      textColor: '#333',
+      borderColor: '#ddd',
+      borderRadius: 4,
+      padding: 10,
+      fontSize: 12,
+      showShapes: true,
+      showColors: true
+    },
+    zoomConfig: {
+      zoomOnLoad: 'fit',
+      minZoom: 0.1,
+      maxZoom: 5,
+      animationDuration: 750
+    }
+  };
 
   constructor() {
-    this.initializeApp();
+    this.loadSampleData();
   }
 
-  private initializeApp(): void {
-    this.loadDataset();
-    this.applyTheme();
-    this.applyPreset();
-  }
+  debugNetworkData(): void {
+    console.log('🔍 Debugging Network Data...');
+    console.log('Raw data:', this.networkData);
 
-  loadDataset(): void {
-    try {
-      switch (this.selectedDataset) {
-        case 'simple':
-          this.networkData = this.generateSimpleNetwork();
-          break;
-        case 'complex':
-          this.networkData = this.generateComplexNetwork();
-          break;
-        case 'large':
-          this.networkData = this.generateLargeNetwork();
-          break;
-        default:
-          this.networkData = this.generateSimpleNetwork();
+    // Check nodes
+    console.log('📊 Nodes Analysis:');
+    console.log('Node count:', this.networkData.nodes.length);
+    console.log('Node IDs:', this.networkData.nodes.map(n => `${n.id} (${typeof n.id})`));
+
+    // Check for duplicate IDs
+    const nodeIds = this.networkData.nodes.map(n => n.id.toString());
+    const duplicateIds = nodeIds.filter((id, index) => nodeIds.indexOf(id) !== index);
+    if (duplicateIds.length > 0) {
+      console.warn('⚠️ Duplicate node IDs found:', duplicateIds);
+    }
+
+    // Check links
+    console.log('🔗 Links Analysis:');
+    console.log('Link count:', this.networkData.links.length);
+
+    // Check each link
+    this.networkData.links.forEach((link, index) => {
+      const sourceId = (typeof link.source === 'object' ? link.source.id : link.source).toString();
+      const targetId = (typeof link.target === 'object' ? link.target.id : link.target).toString();
+
+      const sourceExists = this.networkData.nodes.some(n => n.id.toString() === sourceId);
+      const targetExists = this.networkData.nodes.some(n => n.id.toString() === targetId);
+
+      console.log(`Link ${index}: ${sourceId} -> ${targetId}`);
+
+      if (!sourceExists) {
+        console.error(`❌ Source node not found: ${sourceId}`);
       }
-      this.logEvent('datasetLoaded', { dataset: this.selectedDataset });
-    } catch (error) {
-      this.onError({
-        type: 'data',
-        message: `Failed to load dataset: ${this.selectedDataset}`
-      });
+      if (!targetExists) {
+        console.error(`❌ Target node not found: ${targetId}`);
+      }
+    });
+
+    // Check for orphaned links
+    const allNodeIds = new Set(this.networkData.nodes.map(n => n.id.toString()));
+    const orphanedLinks = this.networkData.links.filter(link => {
+      const sourceId = (typeof link.source === 'object' ? link.source.id : link.source).toString();
+      const targetId = (typeof link.target === 'object' ? link.target.id : link.target).toString();
+      return !allNodeIds.has(sourceId) || !allNodeIds.has(targetId);
+    });
+
+    if (orphanedLinks.length > 0) {
+      console.error('🚨 Orphaned links found:', orphanedLinks);
+    } else {
+      console.log('✅ All links have valid node references');
     }
   }
+  fixNetworkData(): void {
+    console.log('🔧 Fixing network data...');
 
-  applyTheme(): void {
-    try {
-      const themeConfig = this.getThemeConfig(this.selectedTheme);
-      this.visualizationConfig = {
-        ...this.visualizationConfig,
-        ...themeConfig
+    // Ensure all node IDs are strings
+    this.networkData.nodes.forEach(node => {
+      if (typeof node.id !== 'string') {
+        node.id = node.id.toString();
+      }
+    });
+
+    // Filter out invalid links
+    const validNodeIds = new Set(this.networkData.nodes.map(n => n.id.toString()));
+
+    const originalLinkCount = this.networkData.links.length;
+    this.networkData.links = this.networkData.links.filter(link => {
+      const sourceId = (typeof link.source === 'object' ? link.source.id : link.source).toString();
+      const targetId = (typeof link.target === 'object' ? link.target.id : link.target).toString();
+
+      return validNodeIds.has(sourceId) && validNodeIds.has(targetId);
+    });
+
+    // Update link source/target to be string IDs
+    this.networkData.links.forEach(link => {
+      if (typeof link.source === 'object') {
+        link.source = link.source.id.toString();
+      } else {
+        link.source = link.source.toString();
+      }
+
+      if (typeof link.target === 'object') {
+        link.target = link.target.id.toString();
+      } else {
+        link.target = link.target.toString();
+      }
+    });
+
+    console.log(`✅ Fixed data: removed ${originalLinkCount - this.networkData.links.length} invalid links`);
+    console.log('Updated data:', this.networkData);
+
+    // Trigger re-render by creating new object reference
+    this.networkData = { ...this.networkData };
+  }
+  loadSampleData(): void {
+    this.isLoading = true;
+    this.statusMessage = 'Loading sample network data...';
+    this.statusClass = 'loading';
+
+    setTimeout(() => {
+      this.networkData = {
+        nodes: [
+          { id: '1', label: 'Alice', group: 'A', size: 25 },      // String IDs
+          { id: '2', label: 'Bob', group: 'B', size: 20 },
+          { id: '3', label: 'Charlie', group: 'A', size: 22 },
+          { id: '4', label: 'Diana', group: 'C', size: 18 },
+          { id: '5', label: 'Eve', group: 'B', size: 24 },
+          { id: '6', label: 'Frank', group: 'C', size: 16 },
+          { id: '7', label: 'Grace', group: 'D', size: 21 },
+          { id: '8', label: 'Henry', group: 'D', size: 19 },
+          { id: '9', label: 'Iris', group: 'E', size: 23 },
+          { id: '10', label: 'Jack', group: 'E', size: 17 }
+        ],
+        links: [
+          { source: '1', target: '2', value: 3, width: 3 },      // String IDs
+          { source: '1', target: '3', value: 2, width: 2 },
+          { source: '2', target: '4', value: 1, width: 2 },
+          { source: '3', target: '5', value: 4, width: 4 },
+          { source: '4', target: '6', value: 2, width: 2 },
+          { source: '5', target: '7', value: 3, width: 3 },
+          { source: '6', target: '8', value: 1, width: 2 },
+          { source: '7', target: '9', value: 2, width: 2 },
+          { source: '8', target: '10', value: 3, width: 3 },
+          { source: '9', target: '10', value: 1, width: 2 },
+          { source: '1', target: '5', value: 2, width: 2 },
+          { source: '3', target: '7', value: 1, width: 2 },
+          { source: '2', target: '8', value: 2, width: 2 },
+          { source: '4', target: '9', value: 1, width: 2 }
+        ]
       };
-      this.logEvent('themeChanged', { theme: this.selectedTheme });
-    } catch (error) {
-      this.onError({
-        type: 'configuration',
-        message: `Failed to apply theme: ${this.selectedTheme}`
-      });
-    }
+
+      this.isLoading = false;
+      this.statusMessage = `✅ Loaded ${this.networkData.nodes.length} nodes and ${this.networkData.links.length} links successfully!`;
+      this.statusClass = 'success';
+      this.addEvent('system', 'Sample data loaded successfully');
+    }, 1000);
   }
 
-  applyPreset(): void {
-    try {
-      const presetConfig = this.getPresetConfig(this.selectedPreset);
-      this.visualizationConfig = {
-        ...this.visualizationConfig,
-        ...presetConfig
+  addRandomNode(): void {
+    const newId = Math.max(...this.networkData.nodes.map((n: any) => +n.id), 0) + 1;
+    const groups = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
+    const names = ['Alex', 'Morgan', 'Taylor', 'Jordan', 'Casey', 'Riley', 'Quinn', 'Sage'];
+
+    const randomGroup = groups[Math.floor(Math.random() * groups.length)];
+    const randomName = names[Math.floor(Math.random() * names.length)];
+
+    const newNode = {
+      id: newId,
+      label: `${randomName} ${newId}`,
+      group: randomGroup,
+      size: Math.floor(Math.random() * 10) + 15
+    };
+
+    // Add random connections
+    const existingNodes = this.networkData.nodes;
+    const numConnections = Math.min(Math.floor(Math.random() * 3) + 1, existingNodes.length);
+    const newLinks = [];
+
+    for (let i = 0; i < numConnections; i++) {
+      const targetNode = existingNodes[Math.floor(Math.random() * existingNodes.length)];
+      newLinks.push({
+        source: newId,
+        target: targetNode.id,
+        value: Math.floor(Math.random() * 3) + 1,
+        width: Math.floor(Math.random() * 3) + 2
+      });
+    }
+
+    // Create new data object to trigger change detection
+    this.networkData = {
+      nodes: [...this.networkData.nodes, newNode],
+      links: [...this.networkData.links, ...newLinks]
+    };
+
+    this.statusMessage = `Added ${newNode.label} with ${numConnections} connections`;
+    this.addEvent('system', `Added node: ${newNode.label} (Group ${randomGroup})`);
+  }
+
+  clearData(): void {
+    this.networkData = { nodes: [], links: [] };
+    this.statusMessage = 'Network cleared - load sample data to start';
+    this.statusClass = 'error';
+    this.addEvent('system', 'Network data cleared');
+  }
+
+  toggleTheme(): void {
+    this.isDarkTheme = !this.isDarkTheme;
+
+    if (this.isDarkTheme) {
+      this.networkConfig = {
+        ...this.networkConfig,
+        backgroundColor: '#2c3e50',
+        nodeStyles: {
+          ...this.networkConfig.nodeStyles,
+          defaultBorderColor: '#34495e'
+        },
+        tooltipConfig: {
+          ...this.networkConfig.tooltipConfig,
+          backgroundColor: 'rgba(52, 73, 94, 0.95)',
+          textColor: '#ecf0f1'
+        },
+        legendConfig: {
+          ...this.networkConfig.legendConfig,
+          backgroundColor: 'rgba(52, 73, 94, 0.95)',
+          textColor: '#ecf0f1',
+          borderColor: '#34495e'
+        }
       };
-      this.logEvent('presetChanged', { preset: this.selectedPreset });
-    } catch (error) {
-      this.onError({
-        type: 'configuration',
-        message: `Failed to apply preset: ${this.selectedPreset}`
-      });
+      this.statusMessage = 'Switched to dark theme';
+    } else {
+      this.networkConfig = {
+        ...this.networkConfig,
+        backgroundColor: '#ffffff',
+        nodeStyles: {
+          ...this.networkConfig.nodeStyles,
+          defaultBorderColor: '#ffffff'
+        },
+        tooltipConfig: {
+          ...this.networkConfig.tooltipConfig,
+          backgroundColor: 'rgba(0, 0, 0, 0.8)',
+          textColor: 'white'
+        },
+        legendConfig: {
+          ...this.networkConfig.legendConfig,
+          backgroundColor: 'rgba(255, 255, 255, 0.95)',
+          textColor: '#333',
+          borderColor: '#ddd'
+        }
+      };
+      this.statusMessage = 'Switched to light theme';
     }
+
+    this.addEvent('system', `Theme changed to ${this.isDarkTheme ? 'dark' : 'light'}`);
   }
 
-  // Event handlers
+  getUniqueGroups(): string[] {
+    const groups = new Set(this.networkData.nodes.map((n: any) => n.group).filter((g: any) => g !== undefined));
+    return Array.from(groups) as string[];
+  }
+
   onNodeClick(event: NetworkEvent): void {
-    this.logEvent('nodeClick', event.data);
-    console.log('Node clicked:', event.data);
+    if (event.data) {
+      this.addEvent('nodeClick', `Clicked: ${event.data.label || event.data.id} (Group ${event.data.group})`);
+    }
   }
 
   onNodeHover(event: NetworkEvent): void {
-    this.logEvent('nodeHover', event.data);
+    if (event.data) {
+      this.addEvent('nodeHover', `Hovered: ${event.data.label || event.data.id}`);
+    }
   }
 
   onLinkClick(event: NetworkEvent): void {
-    this.logEvent('linkClick', event.data);
-    console.log('Link clicked:', event.data);
+    if (event.data) {
+      const source = typeof event.data.source === 'object' ? event.data.source.id : event.data.source;
+      const target = typeof event.data.target === 'object' ? event.data.target.id : event.data.target;
+      this.addEvent('linkClick', `Clicked link: ${source} → ${target} (strength: ${event.data.value})`);
+    }
   }
 
-  onZoomChanged(event: any): void {
-    this.logEvent('zoomChanged', event);
+  onBackgroundClick(event: NetworkEvent): void {
+    this.addEvent('backgroundClick', 'Clicked background - selection cleared');
   }
 
-  onError(error: NetworkError): void {
-    this.errors.push(error);
-    console.error('Network visualization error:', error);
-  }
-
-  clearErrors(): void {
-    this.errors = [];
-  }
-
-  // Event logging
-  private logEvent(type: string, data: any): void {
-    const event: any = {
+  private addEvent(type: string, message: string): void {
+    this.eventLog.unshift({
       type,
-      data,
+      message,
       timestamp: new Date()
-    };
-    this.recentEvents.push(event);
-    this.eventCount++;
+    });
 
-    // Keep only last 50 events to prevent memory issues
-    if (this.recentEvents.length > 50) {
-      this.recentEvents = this.recentEvents.slice(-50);
-    }
-  }
-
-  getEventDescription(event: any): string {
-    switch (event.type) {
-      case 'nodeClick':
-        return `Node: ${event.data?.id || 'Unknown'}`;
-      case 'nodeHover':
-        return `Node: ${event.data?.id || 'Unknown'}`;
-      case 'linkClick':
-        return `Link: ${event.data?.source || 'Unknown'} → ${event.data?.target || 'Unknown'}`;
-      case 'zoomChanged':
-        return `Zoom: ${event.data?.scale?.toFixed(2) || event.scale?.toFixed(2) || 'Unknown'}`;
-      case 'datasetLoaded':
-        return `Dataset: ${event.data?.dataset || 'Unknown'}`;
-      case 'themeChanged':
-        return `Theme: ${event.data?.theme || 'Unknown'}`;
-      case 'presetChanged':
-        return `Preset: ${event.data?.preset || 'Unknown'}`;
-      default:
-        return JSON.stringify(event.data).substring(0, 50) + '...';
-    }
-  }
-
-  // Utility methods
-  refreshVisualization(): void {
-    this.loadDataset();
-  }
-
-  exportConfiguration(): void {
-    const config = {
-      dataset: this.selectedDataset,
-      theme: this.selectedTheme,
-      preset: this.selectedPreset,
-      showControls: this.showControls,
-      showLegend: this.showLegend,
-      showTooltip: this.showTooltip,
-      visualizationConfig: this.visualizationConfig
-    };
-
-    const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'network-viz-config.json';
-    a.click();
-    URL.revokeObjectURL(url);
-
-    this.logEvent('configExported', { timestamp: new Date() });
-  }
-
-  resetToDefaults(): void {
-    this.selectedDataset = 'simple';
-    this.selectedTheme = 'light';
-    this.selectedPreset = 'presentation';
-    this.showControls = true;
-    this.showLegend = true;
-    this.showTooltip = true;
-    this.errors = [];
-    this.recentEvents = [];
-    this.eventCount = 0;
-
-    this.initializeApp();
-    this.logEvent('resetToDefaults', { timestamp: new Date() });
-  }
-
-  // Data generation methods
-  private generateSimpleNetwork(): NetworkData {
-    return {
-      nodes: [
-        { id: 'A', label: 'Node A', group: 'primary' },
-        { id: 'B', label: 'Node B', group: 'secondary' },
-        { id: 'C', label: 'Node C', group: 'secondary' },
-        { id: 'D', label: 'Node D', group: 'tertiary' },
-        { id: 'E', label: 'Node E', group: 'tertiary' }
-      ],
-      links: [
-        { source: 'A', target: 'B', weight: 1 },
-        { source: 'A', target: 'C', weight: 2 },
-        { source: 'B', target: 'D', weight: 1 },
-        { source: 'C', target: 'E', weight: 1 },
-        { source: 'D', target: 'E', weight: 3 }
-      ]
-    };
-  }
-
-  private generateComplexNetwork(): NetworkData {
-    const nodes = [];
-    const links:any = [];
-
-    // Generate 20 nodes with different groups
-    for (let i = 0; i < 20; i++) {
-      nodes.push({
-        id: `node-${i}`,
-        label: `Node ${i}`,
-        group: i < 5 ? 'core' : i < 12 ? 'secondary' : 'peripheral',
-        size: Math.random() * 10 + 5
-      });
-    }
-
-    // Generate links with some clustering
-    for (let i = 0; i < nodes.length; i++) {
-      const numLinks = Math.floor(Math.random() * 4) + 1;
-      for (let j = 0; j < numLinks; j++) {
-        const target = Math.floor(Math.random() * nodes.length);
-        if (target !== i && !links.find((l:any) =>
-          (l.source === `node-${i}` && l.target === `node-${target}`) ||
-          (l.source === `node-${target}` && l.target === `node-${i}`)
-        )) {
-          links.push({
-            source: `node-${i}`,
-            target: `node-${target}`,
-            weight: Math.random() * 5 + 1
-          });
-        }
-      }
-    }
-
-    return { nodes, links };
-  }
-
-  private generateLargeNetwork(): NetworkData {
-    const nodes = [];
-    const links:any = [];
-
-    // Generate 100 nodes
-    for (let i = 0; i < 100; i++) {
-      nodes.push({
-        id: `n${i}`,
-        label: `Node ${i}`,
-        group: Math.floor(i / 20).toString(),
-        size: Math.random() * 8 + 3
-      });
-    }
-
-    // Generate links following power-law distribution
-    for (let i = 0; i < nodes.length; i++) {
-      const numLinks = Math.floor(Math.pow(Math.random(), 2) * 10) + 1;
-      for (let j = 0; j < numLinks; j++) {
-        const target = Math.floor(Math.random() * nodes.length);
-        if (target !== i && !links.find((l:any) =>
-          (l.source === `n${i}` && l.target === `n${target}`) ||
-          (l.source === `n${target}` && l.target === `n${i}`)
-        )) {
-          links.push({
-            source: `n${i}`,
-            target: `n${target}`,
-            weight: Math.random() * 3 + 0.5
-          });
-        }
-      }
-    }
-
-    return { nodes, links };
-  }
-
-  // Configuration methods - Updated for v11
-  private getThemeConfig(theme: string): Partial<NetworkVisualizationConfig> {
-    switch (theme) {
-      case 'light':
-        return {
-          backgroundColor: '#ffffff',
-          labelColor: '#333333',
-          labelFontSize: 12,
-          enableLabels: true,
-          enableLegend: true,
-          enableTooltip: true
-        };
-
-      case 'dark':
-        return {
-          backgroundColor: '#1a1a1a',
-          labelColor: '#ffffff',
-          labelFontSize: 12,
-          enableLabels: true,
-          enableLegend: true,
-          enableTooltip: true
-        };
-
-      case 'corporate':
-        return {
-          backgroundColor: '#f8f9fa',
-          labelColor: '#495057',
-          labelFontSize: 11,
-          enableLabels: true,
-          enableLegend: true,
-          enableTooltip: true
-        };
-
-      case 'cyberpunk':
-        return {
-          backgroundColor: '#0a0a0a',
-          labelColor: '#00ffff',
-          labelFontSize: 13,
-          enableLabels: true,
-          enableLegend: true,
-          enableTooltip: true
-        };
-
-      default:
-        return this.getThemeConfig('light');
-    }
-  }
-
-  private getPresetConfig(preset: string): Partial<NetworkVisualizationConfig> {
-    switch (preset) {
-      case 'presentation':
-        return {
-          enableLabels: true,
-          enableLegend: true,
-          enableTooltip: true,
-          labelFontSize: 12
-        };
-
-      case 'analytical':
-        return {
-          enableLabels: true,
-          enableLegend: true,
-          enableTooltip: true,
-          labelFontSize: 10
-        };
-
-      case 'performance':
-        return {
-          enableLabels: false,
-          enableLegend: false,
-          enableTooltip: false
-        };
-
-      case 'mobile':
-        return {
-          enableLabels: false,
-          enableLegend: true,
-          enableTooltip: true,
-          labelFontSize: 14
-        };
-
-      default:
-        return this.getPresetConfig('presentation');
+    // Keep only last 50 events
+    if (this.eventLog.length > 50) {
+      this.eventLog = this.eventLog.slice(0, 50);
     }
   }
 }

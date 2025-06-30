@@ -1,29 +1,35 @@
-export interface NetworkNode {
-  id: string | number;
-  label?: string;
-  group?: string | number;
-  category?: string;
-  size?: number;
-  color?: string;
-  shape?: NodeShape;
-  borderColor?: string;
-  borderWidth?: number;
-  x?: number;
-  y?: number;
-  fx?: number | null;
-  fy?: number | null;
-  [key: string]: any;
+// projects/network-viz-lib/src/lib/interfaces/network-visualization.interfaces.ts
+import * as d3 from 'd3';
+
+// Extend D3's SimulationNodeDatum to include our custom properties
+export interface NetworkNode extends d3.SimulationNodeDatum {
+  id: string | number;           // Unique identifier (required)
+  label?: string;               // Display label
+  group?: string | number;      // Group for styling/clustering
+  category?: string;            // Category for additional grouping
+  size?: number;               // Node size
+  color?: string;              // Node color
+  shape?: NodeShape;           // Node shape
+  borderColor?: string;        // Border color
+  borderWidth?: number;        // Border width
+  borderStyle?: BorderStyle;   // Border style
+  fillColor?: string;          // Fill color
+  // x, y, vx, vy, fx, fy are inherited from SimulationNodeDatum
+  [key: string]: any;          // Custom properties
 }
 
-export interface NetworkLink {
-  source: string | number | NetworkNode;
-  target: string | number | NetworkNode;
-  label?: string;
-  value?: number;
-  color?: string;
-  width?: number;
-  style?: LineStyle;
-  [key: string]: any;
+// Extend D3's SimulationLinkDatum for our links
+export interface NetworkLink extends d3.SimulationLinkDatum<NetworkNode> {
+  id?: string;                 // Unique identifier
+  label?: string;              // Display label
+  color?: string;              // Link color
+  width?: number;              // Link width
+  style?: LineStyle;           // Line style
+  value?: number;              // Link value/weight
+  strength?: number;           // Force strength
+  distance?: number;           // Preferred distance
+  // source and target are inherited from SimulationLinkDatum
+  [key: string]: any;          // Custom properties
 }
 
 export interface NetworkData {
